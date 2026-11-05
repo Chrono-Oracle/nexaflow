@@ -17,8 +17,6 @@ const nextConfig: NextConfig = {
   ],
   // Disable floating dev indicators that obstruct touch targets on mobile screens
   devIndicators: false,
-  cacheComponents: true,
-  partialPrefetching: true,
   reactCompiler: true,
   turbopack: {
     rules: {

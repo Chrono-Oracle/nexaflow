@@ -1,12 +1,9 @@
-import { getTranslations } from 'next-intl/server';
+'use client';
 
-interface PageProps {
-  params: Promise<{ locale: string }>;
-}
+import { useTranslations } from 'next-intl';
 
-export default async function TeamPage({ params }: PageProps) {
-  const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: 'pages' });
+export default function TeamPage() {
+  const t = useTranslations('pages');
 
   return (
     <div className="bg-white/75 backdrop-blur-md border border-primary-medium/10 rounded-2xl p-8 shadow-xs max-w-4xl">

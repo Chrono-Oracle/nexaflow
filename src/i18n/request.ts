@@ -1,10 +1,8 @@
 import { getRequestConfig } from 'next-intl/server';
 import { routing } from './routing';
-import { locale as routeLocale } from 'next/root-params';
 
-export default getRequestConfig(async () => {
-  const currentLocale = await routeLocale();
-  let locale = currentLocale;
+export default getRequestConfig(async ({ requestLocale }) => {
+  let locale = await requestLocale;
 
   // Ensure that a valid locale is used
   if (!locale || !routing.locales.includes(locale as 'en' | 'fr')) {

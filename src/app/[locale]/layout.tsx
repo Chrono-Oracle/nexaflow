@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono, Elms_Sans } from 'next/font/google';
 import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
-import { getMessages } from 'next-intl/server';
 import { routing } from '@/i18n/routing';
 import { AppProviders } from '@/providers/AppProviders';
 import { Header } from '@/layouts/Header';
@@ -48,8 +47,8 @@ export default async function LocaleLayout({
     notFound();
   }
 
-  // Retrieve translation messages for the current locale
-  const messages = await getMessages();
+  // Load translation messages statically for the current locale
+  const messages = (await import(`../../../messages/${locale}.json`)).default;
 
   return (
     <html
