@@ -16,12 +16,41 @@
     "analytics": "Analytics",
     "settings": "Settings",
     "help": "Help & Support",
+    "language": "Language",
+    "createProject": "Create Project",
     "collapse": "Collapse sidebar",
     "expand": "Expand sidebar"
+  },
+  "stats": {
+    "activeProjects": "Active Projects",
+    "tasksInProgress": "Task in Progress",
+    "completedTasks": "Completed task",
+    "overdueTasks": "Overdue task",
+    "viewDetails": "View Details"
+  },
+  "calendar": {
+    "title": "Calendar",
+    "subtitle": "View tasks and project deadlines",
+    "addEvent": "Add Event",
+    "today": "Today",
+    "noDeadlines": "No deadlines on this day",
+    "deadlineDue": "{count} items due",
+    "days": {
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat"
+    }
   },
   "pages": {
     "dashboardTitle": "Dashboard",
     "dashboardDesc": "Welcome to your NexaFlow workspace overview.",
+    "welcomeBack": "Welcome back, {name}",
+    "welcomeSubtitle": "Here's a quick overview of your workspace today.",
+    "createProject": "Create Project",
     "projectsTitle": "Projects",
     "projectsDesc": "Manage, filter and track all active company projects.",
     "tasksTitle": "Tasks & Kanban",

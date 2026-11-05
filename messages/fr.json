@@ -16,12 +16,41 @@
     "analytics": "Analytiques",
     "settings": "Paramètres",
     "help": "Aide & Support",
+    "language": "Langue",
+    "createProject": "Créer un projet",
     "collapse": "Réduire la barre",
     "expand": "Agrandir la barre"
+  },
+  "stats": {
+    "activeProjects": "Projets actifs",
+    "tasksInProgress": "Tâches en cours",
+    "completedTasks": "Tâches terminées",
+    "overdueTasks": "Tâches en retard",
+    "viewDetails": "Voir détails"
+  },
+  "calendar": {
+    "title": "Calendrier",
+    "subtitle": "Consultez les tâches et les échéances",
+    "addEvent": "Ajouter",
+    "today": "Aujourd'hui",
+    "noDeadlines": "Aucune échéance ce jour",
+    "deadlineDue": "{count} éléments dus",
+    "days": {
+      "sun": "Dim",
+      "mon": "Lun",
+      "tue": "Mar",
+      "wed": "Mer",
+      "thu": "Jeu",
+      "fri": "Ven",
+      "sat": "Sam"
+    }
   },
   "pages": {
     "dashboardTitle": "Tableau de bord",
     "dashboardDesc": "Bienvenue dans l'aperçu de votre espace de travail NexaFlow.",
+    "welcomeBack": "Bon retour, {name}",
+    "welcomeSubtitle": "Voici un aperçu rapide de votre espace de travail aujourd'hui.",
+    "createProject": "Créer un projet",
     "projectsTitle": "Projets",
     "projectsDesc": "Gérez, filtrez et suivez tous les projets d'entreprise actifs.",
     "tasksTitle": "Tâches & Kanban",

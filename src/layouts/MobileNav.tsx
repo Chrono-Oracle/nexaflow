@@ -14,6 +14,7 @@ import {
   LuChartColumn,
   LuSettings,
   LuCircleHelp,
+  LuPlus,
 } from 'react-icons/lu';
 import { TbGridDots } from 'react-icons/tb';
 
@@ -143,6 +144,14 @@ export function MobileNav() {
       color: 'bg-emerald-50/90 text-emerald-700 border-emerald-200/80',
       isActive: pathname.startsWith('/help'),
     },
+    {
+      href: '#language',
+      label: locale === 'en' ? 'Français' : 'English',
+      icon: LuGlobe,
+      color: 'bg-teal-50/90 text-teal-700 border-teal-200/80',
+      isActive: false,
+      isLanguageSwitch: true,
+    },
   ];
 
   return (
@@ -186,6 +195,30 @@ export function MobileNav() {
                 <div className="grid grid-cols-3 gap-y-3.5 gap-x-2 pt-1.5 pb-4">
                   {extraPages.map((item) => {
                     const Icon = item.icon;
+
+                    if (item.isLanguageSwitch) {
+                      return (
+                        <button
+                          key={item.href}
+                          type="button"
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            handleToggleLanguage();
+                          }}
+                          className="flex flex-col items-center justify-center p-2 rounded-2xl transition-all hover:bg-primary-surface/70 active:scale-95 group focus:outline-none cursor-pointer"
+                        >
+                          <div
+                            className={`w-13 h-13 rounded-2xl flex items-center justify-center border shadow-2xs transition-transform group-hover:scale-105 ${item.color}`}
+                          >
+                            <Icon className="w-5 h-5" />
+                          </div>
+                          <span className="text-xs font-medium text-primary-dark text-center mt-1.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+                            {item.label}
+                          </span>
+                        </button>
+                      );
+                    }
+
                     return (
                       <Link
                         key={item.href}
@@ -324,19 +357,15 @@ export function MobileNav() {
           </div>
         </motion.div>
 
-        {/* Separate Floating Circular Globe Action Button (using Link for 100% reliable touch navigation) */}
-        <Link
-          href={pathname}
-          locale={locale === 'en' ? 'fr' : 'en'}
-          aria-label="Toggle language"
-          title={`Switch to ${locale === 'en' ? 'French' : 'English'}`}
-          className="relative z-20 w-12 h-12 shrink-0 rounded-full bg-white/95 text-primary-dark backdrop-blur-2xl border border-primary-medium/15 shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all focus:outline-none cursor-pointer"
+        {/* Separate Floating Circular Plus Action Button to Add Projects */}
+        <button
+          type="button"
+          aria-label={t('createProject')}
+          title={t('createProject')}
+          className="relative z-20 w-12 h-12 shrink-0 rounded-full bg-primary-dark text-white shadow-xl flex items-center justify-center hover:bg-primary active:scale-95 transition-all focus:outline-none cursor-pointer"
         >
-          <LuGlobe className="w-5 h-5 text-primary-dark" />
-          <span className="absolute -top-1 -right-1 text-[9px] font-bold uppercase px-1.5 py-0.2 rounded-full bg-primary/10 text-primary-dark border border-primary-medium/25 backdrop-blur-xs">
-            {locale}
-          </span>
-        </Link>
+          <LuPlus className="w-6 h-6 stroke-[2.5]" />
+        </button>
       </nav>
     </div>
   );

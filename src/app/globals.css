@@ -62,3 +62,7 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.font-elms {
+  font-family: var(--font-elms-sans), var(--font-geist-sans), sans-serif;
+}

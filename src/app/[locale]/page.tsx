@@ -1,18 +1,33 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { WelcomeBanner } from '@/features/home/components/WelcomeBanner';
+import { StatsGrid } from '@/features/home/components/StatsGrid';
+import { DashboardAside } from '@/features/home/components/DashboardAside';
 
 export default function HomePage() {
-  const t = useTranslations('pages');
-
   return (
-    <div className="bg-white/75 backdrop-blur-md border border-primary-medium/10 rounded-2xl p-8 shadow-xs max-w-4xl">
-      <h1 className="text-2xl font-bold text-primary-dark">
-        {t('dashboardTitle')}
-      </h1>
-      <p className="text-primary-medium mt-1 text-sm">
-        {t('dashboardDesc')}
-      </p>
+    <div className="font-elms w-full space-y-6">
+      {/* Top Welcome Header Section */}
+      <WelcomeBanner />
+
+      {/* Main Dashboard: Two-Section Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Section: Overview Contents */}
+        <section
+          aria-label="Overview Contents"
+          className="lg:col-span-8 xl:col-span-8 space-y-6"
+        >
+          <StatsGrid />
+        </section>
+
+        {/* Right Section: Aside Bar */}
+        <aside
+          aria-label="Dashboard Aside"
+          className="lg:col-span-4 xl:col-span-4 space-y-6"
+        >
+          <DashboardAside />
+        </aside>
+      </div>
     </div>
   );
 }
