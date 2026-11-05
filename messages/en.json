@@ -1,0 +1,40 @@
+{
+  "header": {
+    "brandName": "NexaFlow",
+    "searchPlaceholder": "Search projects, tasks, members...",
+    "notifications": "Notifications",
+    "settings": "Settings",
+    "opsManager": "Ops Manager",
+    "switchLanguage": "Switch language"
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "projects": "Projects",
+    "tasks": "Tasks",
+    "team": "Team",
+    "roadmap": "Roadmap",
+    "analytics": "Analytics",
+    "settings": "Settings",
+    "help": "Help & Support",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar"
+  },
+  "pages": {
+    "dashboardTitle": "Dashboard",
+    "dashboardDesc": "Welcome to your NexaFlow workspace overview.",
+    "projectsTitle": "Projects",
+    "projectsDesc": "Manage, filter and track all active company projects.",
+    "tasksTitle": "Tasks & Kanban",
+    "tasksDesc": "Organize, prioritize and track daily actionable work items.",
+    "teamTitle": "Team Directory",
+    "teamDesc": "Overview of team members, roles and workload capacities.",
+    "roadmapTitle": "Roadmap & Timeline",
+    "roadmapDesc": "Gantt timeline of project schedules, phases and deadlines.",
+    "analyticsTitle": "Analytics & Reports",
+    "analyticsDesc": "Performance metrics, completion rates and velocity insights.",
+    "settingsTitle": "Settings",
+    "settingsDesc": "Workspace configuration, appearance and data controls.",
+    "helpTitle": "Help & Support",
+    "helpDesc": "Guides, documentation and technical assistance for NexaFlow."
+  }
+}

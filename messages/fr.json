@@ -1,0 +1,40 @@
+{
+  "header": {
+    "brandName": "NexaFlow",
+    "searchPlaceholder": "Rechercher projets, tâches, membres...",
+    "notifications": "Notifications",
+    "settings": "Paramètres",
+    "opsManager": "Responsable des opérations",
+    "switchLanguage": "Changer de langue"
+  },
+  "navigation": {
+    "dashboard": "Tableau de bord",
+    "projects": "Projets",
+    "tasks": "Tâches",
+    "team": "Équipe",
+    "roadmap": "Feuille de route",
+    "analytics": "Analytiques",
+    "settings": "Paramètres",
+    "help": "Aide & Support",
+    "collapse": "Réduire la barre",
+    "expand": "Agrandir la barre"
+  },
+  "pages": {
+    "dashboardTitle": "Tableau de bord",
+    "dashboardDesc": "Bienvenue dans l'aperçu de votre espace de travail NexaFlow.",
+    "projectsTitle": "Projets",
+    "projectsDesc": "Gérez, filtrez et suivez tous les projets d'entreprise actifs.",
+    "tasksTitle": "Tâches & Kanban",
+    "tasksDesc": "Organisez, priorisez et suivez les éléments d'action quotidiens.",
+    "teamTitle": "Annuaire de l'équipe",
+    "teamDesc": "Aperçu des membres de l'équipe, de leurs rôles et de leurs capacités.",
+    "roadmapTitle": "Feuille de route & Chronologie",
+    "roadmapDesc": "Chronologie Gantt des calendriers de projet, phases et échéances.",
+    "analyticsTitle": "Analytiques & Rapports",
+    "analyticsDesc": "Métriques de performance, taux d'achèvement et aperçus de vélocité.",
+    "settingsTitle": "Paramètres",
+    "settingsDesc": "Configuration de l'espace de travail, apparence et contrôles des données.",
+    "helpTitle": "Aide & Support",
+    "helpDesc": "Guides, documentation et assistance technique pour NexaFlow."
+  }
+}
