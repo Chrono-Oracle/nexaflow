@@ -2,6 +2,7 @@
 
 import { WelcomeBanner } from '@/features/home/components/WelcomeBanner';
 import { StatsGrid } from '@/features/home/components/StatsGrid';
+import { ProjectsOverviewWidget } from '@/features/home/components/ProjectsOverviewWidget';
 import { DashboardAside } from '@/features/home/components/DashboardAside';
 
 export default function HomePage() {
@@ -18,6 +19,7 @@ export default function HomePage() {
           className="lg:col-span-8 xl:col-span-8 space-y-6"
         >
           <StatsGrid />
+          <ProjectsOverviewWidget />
         </section>
 
         {/* Right Section: Aside Bar */}

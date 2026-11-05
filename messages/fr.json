@@ -45,6 +45,32 @@
       "sat": "Sam"
     }
   },
+  "projectOverview": {
+    "title": "Projets",
+    "subtitle": "Aperçu de vos projets actifs",
+    "viewAll": "Voir tout",
+    "columns": {
+      "projectName": "Nom du projet",
+      "status": "Statut",
+      "progress": "Progression",
+      "priority": "Priorité",
+      "deadline": "Échéance",
+      "actions": "Actions"
+    },
+    "view": "Voir",
+    "status": {
+      "inProgress": "En cours",
+      "completed": "Terminé",
+      "atRisk": "À risque",
+      "inReview": "En revue",
+      "pending": "En attente"
+    },
+    "priority": {
+      "high": "Haute",
+      "medium": "Moyenne",
+      "low": "Basse"
+    }
+  },
   "pages": {
     "dashboardTitle": "Tableau de bord",
     "dashboardDesc": "Bienvenue dans l'aperçu de votre espace de travail NexaFlow.",

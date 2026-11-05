@@ -45,6 +45,32 @@
       "sat": "Sat"
     }
   },
+  "projectOverview": {
+    "title": "Projects",
+    "subtitle": "Your active projects overview",
+    "viewAll": "View all",
+    "columns": {
+      "projectName": "Project Name",
+      "status": "Status",
+      "progress": "Progress",
+      "priority": "Priority",
+      "deadline": "Deadline",
+      "actions": "Actions"
+    },
+    "view": "View",
+    "status": {
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "atRisk": "At Risk",
+      "inReview": "In Review",
+      "pending": "Pending"
+    },
+    "priority": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    }
+  },
   "pages": {
     "dashboardTitle": "Dashboard",
     "dashboardDesc": "Welcome to your NexaFlow workspace overview.",
