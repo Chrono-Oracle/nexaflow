@@ -230,6 +230,7 @@
   },
   "datePicker": {
     "selectDate": "Select date",
+    "today": "Today",
     "previousMonth": "Previous month",
     "nextMonth": "Next month",
     "days": {

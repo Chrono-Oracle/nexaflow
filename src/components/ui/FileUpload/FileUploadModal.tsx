@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, DragEvent, ChangeEvent } from 'react';
+import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LuCloudUpload,
@@ -33,6 +34,7 @@ export function FileUploadModal({
   onAttachFiles,
   initialAttachments = [],
 }: FileUploadModalProps) {
+  const t = useTranslations('fileUpload');
   const [files, setFiles] = useState<UploadingFileItem[]>(() =>
     initialAttachments.map((att) => ({
       id: att.id,
@@ -70,7 +72,7 @@ export function FileUploadModal({
     if (oversizedFiles.length > 0) {
       const names = oversizedFiles.map((f) => f.name).join(', ');
       setErrorMessage(
-        `Note: Not more than 20 MB can be uploaded. (${names} exceeded 20 MB)`
+        t('oversizedError', { names })
       );
     } else {
       setErrorMessage(null);
@@ -212,10 +214,10 @@ export function FileUploadModal({
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-primary-dark tracking-tight">
-                    Upload files
+                    {t('title')}
                   </h3>
                   <p className="text-xs text-primary-medium/75">
-                    Select and upload the files of your choice
+                    {t('subtitle')}
                   </p>
                 </div>
               </div>
@@ -225,7 +227,7 @@ export function FileUploadModal({
                 type="button"
                 onClick={onClose}
                 className="w-8 h-8 rounded-full border border-primary-medium/20 text-primary-dark hover:bg-primary-surface flex items-center justify-center transition-colors cursor-pointer"
-                aria-label="Close upload modal"
+                aria-label={t('close')}
               >
                 <LuX className="w-4 h-4" />
               </button>
@@ -272,14 +274,14 @@ export function FileUploadModal({
               </div>
 
               <p className="text-xs sm:text-sm font-semibold text-primary-dark tracking-tight">
-                Choose a file or drag &amp; drop it here.
+                {t('dropzoneTitle')}
               </p>
               <p className="text-[11px] text-primary-medium/70 mt-1">
-                JPEG, PNG, PDF, and MP4 formats, up to 20 MB.
+                {t('dropzoneFormats')}
               </p>
               <div className="mt-2 inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/25 px-2.5 py-0.5 rounded-full text-[10.5px] font-semibold text-amber-900">
                 <LuInfo className="w-3 h-3 text-amber-700 shrink-0" />
-                <span>Note: Not more than 20 MB can be uploaded.</span>
+                <span>{t('dropzoneNote')}</span>
               </div>
 
               {/* Hidden File Input */}
@@ -297,7 +299,7 @@ export function FileUploadModal({
                 onClick={() => fileInputRef.current?.click()}
                 className="mt-3.5 px-4 py-2 bg-white hover:bg-primary-surface border border-primary-medium/20 rounded-xl shadow-2xs font-semibold text-xs text-primary-dark transition-all cursor-pointer active:scale-95"
               >
-                Browse File
+                {t('browseFile')}
               </button>
             </div>
 
@@ -333,12 +335,15 @@ export function FileUploadModal({
                               {isUploading ? (
                                 <>
                                   <span>
-                                    {formattedUploaded} of {file.formattedSize}
+                                    {t('fileOf', {
+                                      uploaded: formattedUploaded,
+                                      total: file.formattedSize,
+                                    })}
                                   </span>
                                   <span>•</span>
                                   <span className="inline-flex items-center gap-1 text-primary-dark font-medium">
                                     <LuLoader className="w-3 h-3 animate-spin text-primary" />
-                                    <span>Uploading...</span>
+                                    <span>{t('uploading')}</span>
                                   </span>
                                 </>
                               ) : (
@@ -347,7 +352,7 @@ export function FileUploadModal({
                                   <span>•</span>
                                   <span className="inline-flex items-center gap-1 text-emerald-600 font-semibold">
                                     <LuCircleCheck className="w-3 h-3 stroke-[2.5]" />
-                                    <span>Completed</span>
+                                    <span>{t('completed')}</span>
                                   </span>
                                 </>
                               )}
@@ -362,7 +367,7 @@ export function FileUploadModal({
                               type="button"
                               onClick={() => handleCancelUpload(file.id)}
                               className="w-7 h-7 rounded-lg text-primary-medium/70 hover:text-primary-dark hover:bg-primary-surface transition-colors flex items-center justify-center cursor-pointer"
-                              title="Cancel upload"
+                              title={t('cancelUpload')}
                             >
                               <LuX className="w-4 h-4" />
                             </button>
@@ -371,7 +376,7 @@ export function FileUploadModal({
                               type="button"
                               onClick={() => handleDeleteFile(file.id)}
                               className="w-7 h-7 rounded-lg text-primary-medium/60 hover:text-red-600 hover:bg-red-50 transition-colors flex items-center justify-center cursor-pointer"
-                              title="Delete file"
+                              title={t('deleteFile')}
                             >
                               <LuTrash2 className="w-4 h-4" />
                             </button>
@@ -415,8 +420,7 @@ export function FileUploadModal({
                     onClick={handleDone}
                     className="w-full py-3 rounded-xl bg-primary-dark text-white font-semibold text-xs hover:bg-primary active:scale-98 transition-all cursor-pointer shadow-xs"
                   >
-                    Done ({completedFiles.length} file
-                    {completedFiles.length === 1 ? '' : 's'})
+                    {t('done', { count: completedFiles.length })}
                   </button>
                 </motion.div>
               )}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, FormEvent } from 'react';
+import { useTranslations } from 'next-intl';
 import { RichTextToolbar, ActiveFormats } from './RichTextToolbar';
 
 interface RichTextEditorProps {
@@ -30,7 +31,7 @@ const DEFAULT_ACTIVE_FORMATS: ActiveFormats = {
 export function RichTextEditor({
   value = '',
   onChange,
-  placeholder = 'Add task description...',
+  placeholder,
   className = '',
   minHeight = 'min-h-[110px]',
   showBlockArrow = true,
@@ -38,9 +39,12 @@ export function RichTextEditor({
   showQuote = true,
   onOpenUploadModal,
 }: RichTextEditorProps) {
+  const t = useTranslations('tasksPage');
   const editorRef = useRef<HTMLDivElement>(null);
   const [activeFormats, setActiveFormats] = useState<ActiveFormats>(DEFAULT_ACTIVE_FORMATS);
   const [isEmpty, setIsEmpty] = useState(true);
+
+  const effectivePlaceholder = placeholder || t('modal.descriptionPlaceholder');
 
   // Sync incoming value to editor content if changed externally
   useEffect(() => {
@@ -156,7 +160,7 @@ export function RichTextEditor({
             onClick={() => editorRef.current?.focus()}
             className="absolute top-3.5 sm:top-4 left-3.5 sm:left-4 pointer-events-none text-xs sm:text-sm text-primary-medium/55 select-none font-normal"
           >
-            {placeholder}
+            {effectivePlaceholder}
           </div>
         )}
       </div>

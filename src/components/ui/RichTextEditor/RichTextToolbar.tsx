@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, MouseEvent } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   LuBold,
   LuItalic,
@@ -39,11 +40,11 @@ interface RichTextToolbarProps {
 }
 
 const FORMAT_BLOCK_OPTIONS = [
-  { label: 'Normal text', value: '<p>' },
-  { label: 'Heading 1', value: '<h1>' },
-  { label: 'Heading 2', value: '<h2>' },
-  { label: 'Heading 3', value: '<h3>' },
-  { label: 'Code block', value: '<pre>' },
+  { labelKey: 'normalText', value: '<p>' },
+  { labelKey: 'heading1', value: '<h1>' },
+  { labelKey: 'heading2', value: '<h2>' },
+  { labelKey: 'heading3', value: '<h3>' },
+  { labelKey: 'codeBlock', value: '<pre>' },
 ];
 
 export function RichTextToolbar({
@@ -54,6 +55,7 @@ export function RichTextToolbar({
   showQuote = true,
   onOpenUpload,
 }: RichTextToolbarProps) {
+  const t = useTranslations('richText');
   const [showBlockMenu, setShowBlockMenu] = useState(false);
   const [showAlignMenu, setShowAlignMenu] = useState(false);
   const blockMenuRef = useRef<HTMLDivElement>(null);
@@ -78,12 +80,13 @@ export function RichTextToolbar({
     e.preventDefault();
   };
 
-  const currentBlockLabel =
-    FORMAT_BLOCK_OPTIONS.find((opt) => opt.value.toLowerCase().includes(activeFormats.formatBlock.toLowerCase()))?.label ||
-    'Normal text';
+  const currentBlock = FORMAT_BLOCK_OPTIONS.find((opt) =>
+    opt.value.toLowerCase().includes(activeFormats.formatBlock.toLowerCase())
+  );
+  const currentBlockLabel = currentBlock ? t(currentBlock.labelKey) : t('normalText');
 
   const handleInsertLink = () => {
-    const url = window.prompt('Enter link URL (e.g. https://example.com):');
+    const url = window.prompt(t('promptLinkUrl'));
     if (url) {
       onExecuteCommand('createLink', url);
     }
@@ -94,7 +97,7 @@ export function RichTextToolbar({
       onOpenUpload();
       return;
     }
-    const url = window.prompt('Enter image URL (e.g. https://images.unsplash.com/...):');
+    const url = window.prompt(t('promptImageUrl'));
     if (url) {
       onExecuteCommand('insertImage', url);
     }
@@ -129,7 +132,7 @@ export function RichTextToolbar({
                 }}
                 className="w-full text-left px-3 py-1.5 text-xs font-medium text-primary-dark hover:bg-primary-surface/40 transition-colors cursor-pointer block"
               >
-                {opt.label}
+                {t(opt.labelKey)}
               </button>
             ))}
           </div>
@@ -148,7 +151,7 @@ export function RichTextToolbar({
               onMouseDown={handleToolbarButtonMouseDown}
               onClick={() => setShowAlignMenu((prev) => !prev)}
               className="inline-flex items-center gap-0.5 px-1.5 py-1 rounded hover:bg-white/90 text-primary-dark/80 hover:text-primary-dark border border-transparent hover:border-primary-medium/15 transition-colors cursor-pointer"
-              title="Text Alignment"
+              title={t('textAlignment')}
             >
               {activeFormats.alignment === 'center' ? (
                 <LuAlignCenter className="w-3.5 h-3.5" />
@@ -172,7 +175,7 @@ export function RichTextToolbar({
                   className="px-3 py-1.5 text-xs text-primary-dark hover:bg-primary-surface/40 flex items-center gap-2 cursor-pointer"
                 >
                   <LuAlignLeft className="w-3.5 h-3.5" />
-                  <span>Left</span>
+                  <span>{t('left')}</span>
                 </button>
                 <button
                   type="button"
@@ -184,7 +187,7 @@ export function RichTextToolbar({
                   className="px-3 py-1.5 text-xs text-primary-dark hover:bg-primary-surface/40 flex items-center gap-2 cursor-pointer"
                 >
                   <LuAlignCenter className="w-3.5 h-3.5" />
-                  <span>Center</span>
+                  <span>{t('center')}</span>
                 </button>
                 <button
                   type="button"
@@ -196,7 +199,7 @@ export function RichTextToolbar({
                   className="px-3 py-1.5 text-xs text-primary-dark hover:bg-primary-surface/40 flex items-center gap-2 cursor-pointer"
                 >
                   <LuAlignRight className="w-3.5 h-3.5" />
-                  <span>Right</span>
+                  <span>{t('right')}</span>
                 </button>
               </div>
             )}
@@ -217,7 +220,7 @@ export function RichTextToolbar({
             ? 'bg-primary-dark text-white shadow-2xs'
             : 'hover:bg-white/90 text-primary-dark/80 hover:text-primary-dark'
         }`}
-        title="Bold (Ctrl+B)"
+        title={t('bold')}
       >
         <LuBold className="w-3.5 h-3.5 stroke-[2.5]" />
       </button>
@@ -232,7 +235,7 @@ export function RichTextToolbar({
             ? 'bg-primary-dark text-white shadow-2xs'
             : 'hover:bg-white/90 text-primary-dark/80 hover:text-primary-dark'
         }`}
-        title="Italic (Ctrl+I)"
+        title={t('italic')}
       >
         <LuItalic className="w-3.5 h-3.5 stroke-[2.5]" />
       </button>
@@ -247,7 +250,7 @@ export function RichTextToolbar({
             ? 'bg-primary-dark text-white shadow-2xs'
             : 'hover:bg-white/90 text-primary-dark/80 hover:text-primary-dark'
         }`}
-        title="Underline (Ctrl+U)"
+        title={t('underline')}
       >
         <LuUnderline className="w-3.5 h-3.5 stroke-[2.5]" />
       </button>
@@ -262,7 +265,7 @@ export function RichTextToolbar({
             ? 'bg-primary-dark text-white shadow-2xs'
             : 'hover:bg-white/90 text-primary-dark/80 hover:text-primary-dark'
         }`}
-        title="Strikethrough"
+        title={t('strikeThrough')}
       >
         <LuStrikethrough className="w-3.5 h-3.5 stroke-[2.5]" />
       </button>
@@ -280,7 +283,7 @@ export function RichTextToolbar({
             ? 'bg-primary-dark text-white shadow-2xs'
             : 'hover:bg-white/90 text-primary-dark/80 hover:text-primary-dark'
         }`}
-        title="Bullet List"
+        title={t('bulletList')}
       >
         <LuList className="w-3.5 h-3.5 stroke-[2.5]" />
       </button>
@@ -295,7 +298,7 @@ export function RichTextToolbar({
             ? 'bg-primary-dark text-white shadow-2xs'
             : 'hover:bg-white/90 text-primary-dark/80 hover:text-primary-dark'
         }`}
-        title="Numbered List"
+        title={t('numberedList')}
       >
         <LuListOrdered className="w-3.5 h-3.5 stroke-[2.5]" />
       </button>
@@ -309,7 +312,7 @@ export function RichTextToolbar({
         onMouseDown={handleToolbarButtonMouseDown}
         onClick={handleInsertLink}
         className="p-1.5 rounded hover:bg-white/90 text-primary-dark/80 hover:text-primary-dark transition-all cursor-pointer"
-        title="Insert Link"
+        title={t('insertLink')}
       >
         <LuLink className="w-3.5 h-3.5 stroke-[2.2]" />
       </button>
@@ -320,7 +323,7 @@ export function RichTextToolbar({
         onMouseDown={handleToolbarButtonMouseDown}
         onClick={handleInsertImage}
         className="p-1.5 rounded hover:bg-white/90 text-primary-dark/80 hover:text-primary-dark transition-all cursor-pointer"
-        title="Insert Image"
+        title={t('insertImage')}
       >
         <LuImage className="w-3.5 h-3.5 stroke-[2.2]" />
       </button>
@@ -336,7 +339,7 @@ export function RichTextToolbar({
               ? 'bg-primary-dark text-white shadow-2xs'
               : 'hover:bg-white/90 text-primary-dark/80 hover:text-primary-dark'
           }`}
-          title="Blockquote"
+          title={t('blockquote')}
         >
           <LuQuote className="w-3.5 h-3.5 stroke-[2.2]" />
         </button>

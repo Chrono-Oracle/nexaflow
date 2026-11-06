@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import { LuCalendar, LuChevronDown, LuChevronLeft, LuChevronRight } from 'react-icons/lu';
 
 interface MiniCalendarPickerProps {
@@ -12,12 +13,12 @@ interface MiniCalendarPickerProps {
   disabled?: boolean;
 }
 
-export function formatDisplayDate(dateStr?: string): string {
+export function formatDisplayDate(dateStr?: string, locale = 'en-US'): string {
   if (!dateStr) return '';
   try {
     const d = new Date(dateStr + 'T00:00:00');
     if (isNaN(d.getTime())) return dateStr;
-    return new Intl.DateTimeFormat('en-US', {
+    return new Intl.DateTimeFormat(locale, {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
@@ -40,10 +41,12 @@ export function MiniCalendarPicker({
   value,
   onChange,
   onTriggerClick,
-  placeholder = 'Select date',
+  placeholder,
   minDate,
   disabled = false,
 }: MiniCalendarPickerProps) {
+  const locale = useLocale();
+  const t = useTranslations('datePicker');
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [navMonthOffset, setNavMonthOffset] = useState<number | null>(null);
@@ -103,14 +106,14 @@ export function MiniCalendarPicker({
     setNavMonthOffset(diffMonths);
   };
 
-  // Month & Year label (e.g. "November 2026")
+  // Month & Year label (e.g. "November 2026" or "novembre 2026")
   const monthYearLabel = useMemo(() => {
-    const formatter = new Intl.DateTimeFormat('en-US', {
+    const formatter = new Intl.DateTimeFormat(locale, {
       month: 'long',
       year: 'numeric',
     });
     return formatter.format(viewDate);
-  }, [viewDate]);
+  }, [viewDate, locale]);
 
   // 42-day calendar grid matching Home Page Calendar theme
   const calendarCells = useMemo(() => {
@@ -186,7 +189,7 @@ export function MiniCalendarPicker({
               value ? 'text-primary-dark font-semibold' : 'text-primary-medium/60 font-medium'
             }`}
           >
-            {value ? formatDisplayDate(value) : placeholder}
+            {value ? formatDisplayDate(value, locale) : (placeholder || t('selectDate'))}
           </span>
         </div>
         <LuChevronDown
@@ -202,7 +205,7 @@ export function MiniCalendarPicker({
           {/* Header Row: Month Year + Today + Nav Arrows */}
           <div className="flex items-center justify-between mb-2.5 px-0.5">
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-xs sm:text-sm font-bold text-primary-dark tracking-tight truncate">
+              <span className="text-xs sm:text-sm font-bold text-primary-dark tracking-tight truncate capitalize">
                 {monthYearLabel}
               </span>
               <button
@@ -210,7 +213,7 @@ export function MiniCalendarPicker({
                 onClick={handleGoToday}
                 className="text-[10px] font-semibold text-primary-medium/80 hover:text-primary-dark px-1.5 py-0.5 rounded-md hover:bg-primary-surface transition-colors cursor-pointer shrink-0"
               >
-                Today
+                {t('today')}
               </button>
             </div>
 
@@ -218,7 +221,8 @@ export function MiniCalendarPicker({
               <button
                 type="button"
                 onClick={handlePrevMonth}
-                aria-label="Previous month"
+                aria-label={t('previousMonth')}
+                title={t('previousMonth')}
                 className="w-6 h-6 rounded-md bg-primary-surface/70 border border-primary-medium/20 text-primary-dark hover:bg-primary-surface flex items-center justify-center transition-colors shadow-2xs cursor-pointer active:scale-95"
               >
                 <LuChevronLeft className="w-3.5 h-3.5 stroke-[2.2]" />
@@ -226,7 +230,8 @@ export function MiniCalendarPicker({
               <button
                 type="button"
                 onClick={handleNextMonth}
-                aria-label="Next month"
+                aria-label={t('nextMonth')}
+                title={t('nextMonth')}
                 className="w-6 h-6 rounded-md bg-primary-surface/70 border border-primary-medium/20 text-primary-dark hover:bg-primary-surface flex items-center justify-center transition-colors shadow-2xs cursor-pointer active:scale-95"
               >
                 <LuChevronRight className="w-3.5 h-3.5 stroke-[2.2]" />
@@ -236,9 +241,9 @@ export function MiniCalendarPicker({
 
           {/* Days of Week Header */}
           <div className="grid grid-cols-7 gap-1 text-center mb-1.5">
-            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
+            {(['su', 'mo', 'tu', 'we', 'th', 'fr', 'sa'] as const).map((d) => (
               <div key={d} className="text-[10px] font-semibold text-primary-medium/65">
-                {d}
+                {t(`days.${d}`)}
               </div>
             ))}
           </div>
