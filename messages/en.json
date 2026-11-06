@@ -330,5 +330,41 @@
     "settingsDesc": "Workspace configuration, appearance and data controls.",
     "helpTitle": "Help & Support",
     "helpDesc": "Guides, documentation and technical assistance for NexaFlow."
+  },
+  "projectsPage": {
+    "totalProjects": "Total Projects",
+    "filters": "Filters",
+    "newProject": "New Project",
+    "searchPlaceholder": "Search projects...",
+    "allStatus": "All Status",
+    "allPriorities": "All Priorities",
+    "filterByStatus": "Filter by status",
+    "filterByPriority": "Filter by priority",
+    "resetFilters": "Reset Filters",
+    "noProjectsFound": "No projects found",
+    "noProjectsFoundDesc": "Try adjusting your search or filters to find what you are looking for.",
+    "tasksCount": "{count, plural, =0 {0 tasks} =1 {1 task} other {# tasks}}",
+    "dueTo": "Due to:",
+    "progress": "Progress",
+    "createProjectModal": {
+      "title": "Create New Project",
+      "subtitle": "Fill in the project details below to add it to your workspace.",
+      "name": "Project Name",
+      "namePlaceholder": "e.g. Website Redesign",
+      "description": "Description",
+      "descriptionPlaceholder": "Brief overview of goals, scope and deliverables...",
+      "status": "Status",
+      "priority": "Priority",
+      "deadline": "Deadline",
+      "manager": "Project Manager",
+      "color": "Theme Color",
+      "tags": "Tags",
+      "tagsPlaceholder": "e.g. Design, Mobile, Q4 (comma separated)",
+      "cancel": "Cancel",
+      "submit": "Create Project",
+      "submitting": "Creating...",
+      "success": "Project created successfully!",
+      "nameRequired": "Project name is required"
+    }
   }
 }

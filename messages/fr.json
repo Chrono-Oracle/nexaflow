@@ -330,5 +330,41 @@
     "settingsDesc": "Configuration de l'espace de travail, apparence et contrôles des données.",
     "helpTitle": "Aide & Support",
     "helpDesc": "Guides, documentation et assistance technique pour NexaFlow."
+  },
+  "projectsPage": {
+    "totalProjects": "Total des projets",
+    "filters": "Filtres",
+    "newProject": "Nouveau projet",
+    "searchPlaceholder": "Rechercher des projets...",
+    "allStatus": "Tous les statuts",
+    "allPriorities": "Toutes les priorités",
+    "filterByStatus": "Filtrer par statut",
+    "filterByPriority": "Filtrer par priorité",
+    "resetFilters": "Réinitialiser les filtres",
+    "noProjectsFound": "Aucun projet trouvé",
+    "noProjectsFoundDesc": "Essayez d'ajuster votre recherche ou vos filtres pour trouver ce que vous cherchez.",
+    "tasksCount": "{count, plural, =0 {0 tâche} =1 {1 tâche} other {# tâches}}",
+    "dueTo": "Échéance :",
+    "progress": "Progression",
+    "createProjectModal": {
+      "title": "Créer un nouveau projet",
+      "subtitle": "Remplissez les détails ci-dessous pour ajouter un projet à votre espace.",
+      "name": "Nom du projet",
+      "namePlaceholder": "ex. Refonte du site web",
+      "description": "Description",
+      "descriptionPlaceholder": "Aperçu des objectifs, de la portée et des livrables...",
+      "status": "Statut",
+      "priority": "Priorité",
+      "deadline": "Date limite",
+      "manager": "Responsable du projet",
+      "color": "Couleur du thème",
+      "tags": "Étiquettes",
+      "tagsPlaceholder": "ex. Design, Mobile, Q4 (séparés par des virgules)",
+      "cancel": "Annuler",
+      "submit": "Créer le projet",
+      "submitting": "Création...",
+      "success": "Projet créé avec succès !",
+      "nameRequired": "Le nom du projet est requis"
+    }
   }
 }
