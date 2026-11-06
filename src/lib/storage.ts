@@ -287,6 +287,46 @@ export const storageApi = {
     return targetTask;
   },
 
+  async reorderTasks(
+    orderedTaskIds: string[],
+    targetStatus?: { taskId: string; newStatus: TaskStatus }
+  ): Promise<Task[]> {
+    const tasks = await storageApi.getTasks();
+    if (targetStatus) {
+      const target = tasks.find((t) => t.id === targetStatus.taskId);
+      if (target && target.status !== targetStatus.newStatus) {
+        const oldStatus = target.status;
+        target.status = targetStatus.newStatus;
+        if (target.projectId) {
+          await storageApi.syncProjectStats(target.projectId);
+        }
+        await storageApi.addActivity({
+          type: 'task_status_changed',
+          title: 'Task status changed',
+          description: `"${target.title}" moved from ${oldStatus} to ${targetStatus.newStatus}.`,
+          actorName: currentUser.fullName,
+          actorAvatar: currentUser.avatar,
+        });
+      }
+    }
+
+    const taskMap = new Map(tasks.map((t) => [t.id, t]));
+    const reordered: Task[] = [];
+    for (const id of orderedTaskIds) {
+      const item = taskMap.get(id);
+      if (item) {
+        reordered.push(item);
+        taskMap.delete(id);
+      }
+    }
+    for (const remaining of taskMap.values()) {
+      reordered.push(remaining);
+    }
+
+    setStoredItem(STORAGE_KEYS.TASKS, reordered);
+    return reordered;
+  },
+
   async deleteTask(id: string): Promise<boolean> {
     const tasks = await storageApi.getTasks();
     const target = tasks.find((t) => t.id === id);

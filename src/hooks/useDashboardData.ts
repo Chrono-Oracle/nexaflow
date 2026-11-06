@@ -169,6 +169,26 @@ export function useUpdateTaskStatusMutation() {
   });
 }
 
+export function useReorderTasksMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      orderedTaskIds,
+      targetStatus,
+    }: {
+      orderedTaskIds: string[];
+      targetStatus?: { taskId: string; newStatus: TaskStatus };
+    }) => storageApi.reorderTasks(orderedTaskIds, targetStatus),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.TASKS });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PROJECTS });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.STATS });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITIES });
+    },
+  });
+}
+
 export function useDeleteTaskMutation() {
   const queryClient = useQueryClient();
 

@@ -74,6 +74,7 @@ export default function TasksPage() {
             projects={projects}
             searchQuery={searchQuery}
             onToggleTask={handleToggleTask}
+            onAddTask={(status) => handleOpenAddTask(status || 'To Do')}
           />
         )}
       </div>

@@ -30,6 +30,7 @@ import { getProjectPriorityStyle } from '@/features/projects/utils/badgeStyles';
 import {
   useBatchDeleteTasksMutation,
   useBatchUpdateTaskStatusMutation,
+  useUpdateTaskStatusMutation,
 } from '@/hooks/useDashboardData';
 
 interface TaskBoardViewProps {
@@ -181,6 +182,77 @@ export function TaskBoardView({
   // Mutations
   const batchDeleteMutation = useBatchDeleteTasksMutation();
   const batchUpdateStatusMutation = useBatchUpdateTaskStatusMutation();
+  const updateTaskStatusMutation = useUpdateTaskStatusMutation();
+
+  // Drag and Drop state
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
+  const [dragOverColId, setDragOverColId] = useState<TaskStatus | null>(null);
+  const hasDraggedRef = useRef<boolean>(false);
+
+  const draggingTask = useMemo(
+    () => (draggingTaskId ? tasks.find((t) => t.id === draggingTaskId) : null),
+    [draggingTaskId, tasks]
+  );
+
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, task: Task) => {
+    if (selectionModeColId) return;
+    hasDraggedRef.current = true;
+    setDraggingTaskId(task.id);
+    e.dataTransfer.setData('text/plain', task.id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragEnd = () => {
+    setDraggingTaskId(null);
+    setDragOverColId(null);
+    setTimeout(() => {
+      hasDraggedRef.current = false;
+    }, 100);
+  };
+
+  const handleColDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleColDragEnter = (e: React.DragEvent<HTMLDivElement>, colId: TaskStatus) => {
+    e.preventDefault();
+    if (draggingTaskId) {
+      setDragOverColId(colId);
+    }
+  };
+
+  const handleColDragLeave = (e: React.DragEvent<HTMLDivElement>, colId: TaskStatus) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setDragOverColId((prev) => (prev === colId ? null : prev));
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, targetColId: TaskStatus) => {
+    e.preventDefault();
+    setDragOverColId(null);
+    const taskId = e.dataTransfer.getData('text/plain') || draggingTaskId;
+    if (!taskId) return;
+
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+
+    if (task.status === targetColId) return;
+
+    updateTaskStatusMutation.mutate(
+      { taskId: task.id, status: targetColId },
+      {
+        onSuccess: () => {
+          toast.success(
+            t('columnActions.taskMoved', {
+              title: task.title,
+              status: t(STATUS_KEY_MAP[targetColId]),
+            })
+          );
+        },
+      }
+    );
+  };
 
   // Close open dropdown menu when clicking outside
   useEffect(() => {
@@ -281,11 +353,21 @@ export function TaskBoardView({
         const isSelectionMode = selectionModeColId === col.id;
         const isMenuOpen = activeMenuColId === col.id;
         const isConfirmClear = confirmClearColId === col.id;
+        const isDropActive =
+          dragOverColId === col.id && draggingTask && draggingTask.status !== col.id;
 
         return (
           <div
             key={col.id}
-            className="flex-1 min-w-[260px] sm:min-w-[280px] bg-white/80 rounded-2xl p-4 border border-primary-medium/15 shadow-2xs flex flex-col min-h-[460px] shrink-0 xl:shrink"
+            onDragOver={handleColDragOver}
+            onDragEnter={(e) => handleColDragEnter(e, col.id)}
+            onDragLeave={(e) => handleColDragLeave(e, col.id)}
+            onDrop={(e) => handleDrop(e, col.id)}
+            className={`flex-1 min-w-[260px] sm:min-w-[280px] rounded-2xl p-4 border shadow-2xs flex flex-col min-h-[460px] shrink-0 xl:shrink transition-all duration-200 ${
+              isDropActive
+                ? 'bg-[#f7f5ef] ring-2 ring-primary-dark/30 border-primary-dark/40 shadow-md'
+                : 'bg-white/80 border-primary-medium/15'
+            }`}
           >
             {/* Column Header */}
             <div className="flex items-center justify-between pb-3 border-b border-primary-medium/10 mb-3 relative">
@@ -491,165 +573,213 @@ export function TaskBoardView({
             </AnimatePresence>
 
             {/* Column Tasks List */}
-            <div className="flex-1 space-y-3">
+            <motion.div layout className="flex-1 space-y-3 min-h-[160px]">
               {colTasks.length === 0 ? (
-                <div className="h-44 border-2 border-dashed border-primary-medium/15 rounded-xl flex flex-col items-center justify-center p-4 text-center">
-                  <p className="text-xs font-medium text-primary-medium/60">
-                    {t('columnActions.emptyColumn', { title: t(STATUS_KEY_MAP[col.id]) })}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => onAddTask?.(col.id)}
-                    className="mt-2 text-xs font-semibold text-primary-dark hover:underline cursor-pointer inline-flex items-center gap-1"
+                isDropActive ? (
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="h-44 border-2 border-dashed border-primary-dark/60 bg-primary-surface/70 rounded-xl flex flex-col items-center justify-center p-4 text-center text-xs font-bold text-primary-dark shadow-xs"
                   >
-                    <LuPlus className="w-3.5 h-3.5" />
-                    <span>{t('columnActions.addTask')}</span>
-                  </button>
-                </div>
-              ) : (
-                colTasks.map((task) => {
-                  const project = projects.find((p) => p.id === task.projectId);
-                  const assignee = authUsers.find((u) => u.id === task.assigneeId);
-                  const assignees =
-                    task.assigneeIds && task.assigneeIds.length > 0
-                      ? task.assigneeIds
-                          .map((id) => authUsers.find((u) => u.id === id))
-                          .filter((u): u is (typeof authUsers)[0] => Boolean(u))
-                      : assignee
-                      ? [assignee]
-                      : [];
-                  const priorityStyle = getProjectPriorityStyle(task.priority || 'Medium');
-                  const isCardSelected = selectedTaskIds.has(task.id);
-                  const taskNumber = task.taskNumber || taskNumberMap.get(task.id) || 1;
-                  const descPreview = cleanDescription(task.description);
-                  const subtitle = project ? project.name : (descPreview || null);
-                  const attachmentCount = task.attachments?.length || 0;
-
-                  return (
-                    <div
-                      key={task.id}
-                      onClick={() => {
-                        if (isSelectionMode) {
-                          toggleTaskSelection(task.id);
-                        } else {
-                          onTaskClick?.(task);
-                        }
-                      }}
-                      className={`bg-white rounded-2xl p-4 border transition-all cursor-pointer space-y-3 group relative ${
-                        isCardSelected
-                          ? 'border-red-400 bg-red-50/20 ring-2 ring-red-400/20 shadow-xs'
-                          : 'border-primary-medium/15 shadow-2xs hover:shadow-xs hover:border-primary-medium/30'
-                      }`}
+                    <col.Icon className={`w-6 h-6 mb-2 animate-bounce ${col.iconClass}`} />
+                    <span>{t('columnActions.dropTaskHere')}</span>
+                  </motion.div>
+                ) : (
+                  <div className="h-44 border-2 border-dashed border-primary-medium/15 rounded-xl flex flex-col items-center justify-center p-4 text-center">
+                    <p className="text-xs font-medium text-primary-medium/60">
+                      {t('columnActions.emptyColumn', { title: t(STATUS_KEY_MAP[col.id]) })}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => onAddTask?.(col.id)}
+                      className="mt-2 text-xs font-semibold text-primary-dark hover:underline cursor-pointer inline-flex items-center gap-1"
                     >
-                      {/* Checkbox badge when in Selection Mode */}
-                      {isSelectionMode && (
-                        <div className="absolute top-3.5 right-3.5 z-10">
-                          <div
-                            className={`w-4.5 h-4.5 rounded-md flex items-center justify-center transition-all ${
-                              isCardSelected
-                                ? 'bg-red-600 text-white shadow-2xs'
-                                : 'border border-primary-medium/40 bg-white hover:border-red-500'
-                            }`}
-                          >
-                            {isCardSelected && <LuCheck className="w-3 h-3 stroke-[3]" />}
-                          </div>
-                        </div>
-                      )}
+                      <LuPlus className="w-3.5 h-3.5" />
+                      <span>{t('columnActions.addTask')}</span>
+                    </button>
+                  </div>
+                )
+              ) : (
+                <>
+                  {colTasks.map((task) => {
+                    const project = projects.find((p) => p.id === task.projectId);
+                    const assignee = authUsers.find((u) => u.id === task.assigneeId);
+                    const assignees =
+                      task.assigneeIds && task.assigneeIds.length > 0
+                        ? task.assigneeIds
+                            .map((id) => authUsers.find((u) => u.id === id))
+                            .filter((u): u is (typeof authUsers)[0] => Boolean(u))
+                        : assignee
+                        ? [assignee]
+                        : [];
+                    const priorityStyle = getProjectPriorityStyle(task.priority || 'Medium');
+                    const isCardSelected = selectedTaskIds.has(task.id);
+                    const isBeingDragged = draggingTaskId === task.id;
+                    const taskNumber = task.taskNumber || taskNumberMap.get(task.id) || 1;
+                    const descPreview = cleanDescription(task.description);
+                    const subtitle = project ? project.name : (descPreview || null);
+                    const attachmentCount = task.attachments?.length || 0;
 
-                      {/* Top Row: TASK - {taskNumber} on left, Priority Badge on right */}
-                      <div className={`flex items-center justify-between gap-2 ${isSelectionMode ? 'pr-7' : ''}`}>
-                        <div className="flex items-center gap-1.5 text-xs font-bold text-primary-dark/80">
-                          <LuLink className="w-3.5 h-3.5 text-primary-medium/70 shrink-0" />
-                          <span>TASK - {taskNumber}</span>
-                        </div>
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold ${priorityStyle.className}`}
+                    return (
+                      <motion.div
+                        layout
+                        key={task.id}
+                        transition={{
+                          type: 'spring',
+                          stiffness: 420,
+                          damping: 32,
+                          mass: 0.7,
+                        }}
+                      >
+                        <div
+                          draggable={!isSelectionMode}
+                          onDragStart={(e) => handleDragStart(e, task)}
+                          onDragEnd={handleDragEnd}
+                          onClick={() => {
+                            if (hasDraggedRef.current) return;
+                            if (isSelectionMode) {
+                              toggleTaskSelection(task.id);
+                            } else {
+                              onTaskClick?.(task);
+                            }
+                          }}
+                          className={`bg-white rounded-2xl p-4.5 sm:p-5 border select-none transition-all group relative flex flex-col justify-between ${
+                            isSelectionMode ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing hover:-translate-y-0.5'
+                          } ${
+                            isBeingDragged
+                              ? 'opacity-40 scale-[0.98] ring-2 ring-primary-dark/30 shadow-2xl rotate-1'
+                              : isCardSelected
+                              ? 'border-red-400 bg-red-50/20 ring-2 ring-red-400/20 shadow-xs'
+                              : 'border-primary-medium/15 shadow-2xs hover:shadow-md hover:border-primary-medium/30'
+                          }`}
                         >
-                          <LuFlag className="w-2.5 h-2.5 fill-current" />
-                          <span>{tBadges(priorityStyle.labelKey)}</span>
-                        </span>
-                      </div>
-
-                      {/* Title & Subtitle */}
-                      <div className="space-y-0.5">
-                        <h4 className="text-sm font-bold text-primary-dark group-hover:text-primary transition-colors leading-snug line-clamp-2">
-                          {task.title}
-                        </h4>
-                        {subtitle && (
-                          <p className="text-xs text-primary-medium/70 font-normal truncate">
-                            {subtitle}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Due Date Capsule */}
-                      <div>
-                        {task.deadline ? (
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary-surface/80 border border-primary-medium/10 rounded-lg text-xs shadow-2xs">
-                            <LuCalendar className="w-3.5 h-3.5 text-primary-medium/70 shrink-0" />
-                            <span className="text-primary-medium/75 font-normal">{t('dueTo')}</span>
-                            <span className="font-bold text-primary-dark">
-                              {formatCardDate(task.deadline, locale, { shortYear: true })}
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary-surface/50 border border-primary-medium/10 rounded-lg text-xs text-primary-medium/60 shadow-2xs">
-                            <LuCalendar className="w-3.5 h-3.5 text-primary-medium/40 shrink-0" />
-                            <span>{t('noDeadline')}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Divider Line & Footer */}
-                      <div className="border-t border-primary-medium/10 pt-2.5 flex items-center justify-between gap-2">
-                        {/* Footer Left: Assignee Avatars */}
-                        <div className="flex items-center -space-x-2 overflow-hidden">
-                          {assignees.length > 0 ? (
-                            assignees.slice(0, 3).map((a) => (
-                              <Image
-                                key={a.id}
-                                src={a.avatar || '/Avatar.jpg'}
-                                alt={a.fullName}
-                                title={a.fullName}
-                                width={24}
-                                height={24}
-                                unoptimized
-                                className="w-6 h-6 rounded-full object-cover border-2 border-white shadow-2xs"
-                              />
-                            ))
-                          ) : (
-                            <div className="w-6 h-6 rounded-full bg-primary-surface border-2 border-white shadow-2xs flex items-center justify-center text-primary-medium/60 text-[10px] font-medium">
-                              -
+                        {/* Checkbox badge when in Selection Mode */}
+                        {isSelectionMode && (
+                          <div className="absolute top-4 right-4 z-10">
+                            <div
+                              className={`w-4.5 h-4.5 rounded-md flex items-center justify-center transition-all ${
+                                isCardSelected
+                                  ? 'bg-red-600 text-white shadow-2xs'
+                                  : 'border border-primary-medium/40 bg-white hover:border-red-500'
+                              }`}
+                            >
+                              {isCardSelected && <LuCheck className="w-3 h-3 stroke-[3]" />}
                             </div>
-                          )}
-                          {assignees.length > 3 && (
-                            <span className="w-6 h-6 rounded-full bg-primary-medium/20 text-primary-dark font-bold text-[9px] flex items-center justify-center border-2 border-white shadow-2xs">
-                              +{assignees.length - 3}
-                            </span>
-                          )}
-                        </div>
+                          </div>
+                        )}
 
-                        {/* Footer Right: Media Attachments Count (if any) + Created Date */}
-                        <div className="flex items-center gap-2 text-xs text-primary-medium/75 shrink-0">
-                          {attachmentCount > 0 && (
-                            <>
-                              <div className="flex items-center gap-1 font-semibold text-primary-dark text-xs">
-                                <LuImage className="w-3.5 h-3.5 text-primary-medium/80 shrink-0" />
-                                <span>{attachmentCount}</span>
-                              </div>
-                              <span className="text-primary-medium/30">|</span>
-                            </>
-                          )}
-                          <span className="text-[11px] text-primary-medium/80 font-medium">
-                            {formatCardDate(task.createdAt, locale)}
+                        {/* Top Row: TASK - {taskNumber} on left, Priority Badge on right */}
+                        <div className={`flex items-center justify-between gap-2 mb-3.5 ${isSelectionMode ? 'pr-7' : ''}`}>
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-primary-dark/80 tracking-tight">
+                            <LuLink className="w-3.5 h-3.5 text-primary-medium/70 shrink-0" />
+                            <span>TASK - {taskNumber}</span>
+                          </div>
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold ${priorityStyle.className}`}
+                          >
+                            <LuFlag className="w-2.5 h-2.5 fill-current" />
+                            <span>{tBadges(priorityStyle.labelKey)}</span>
                           </span>
                         </div>
+
+                        {/* Title & Subtitle */}
+                        <div className="mb-3.5">
+                          <h4 className="text-sm sm:text-[15px] font-bold text-primary-dark group-hover:text-primary transition-colors leading-snug line-clamp-2">
+                            {task.title}
+                          </h4>
+                          {subtitle && (
+                            <p className="text-xs text-primary-medium/70 font-normal truncate mt-1">
+                              {subtitle}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Due Date Capsule */}
+                        <div className="mb-3.5">
+                          {task.deadline ? (
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#f4f2ec] border border-primary-medium/10 rounded-lg text-xs shadow-2xs">
+                              <LuCalendar className="w-3.5 h-3.5 text-primary-dark/70 shrink-0" />
+                              <span className="text-primary-medium/75 font-normal">{t('dueTo')}</span>
+                              <span className="font-bold text-primary-dark">
+                                {formatCardDate(task.deadline, locale, { shortYear: true })}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#f4f2ec]/50 border border-primary-medium/10 rounded-lg text-xs text-primary-medium/60 shadow-2xs">
+                              <LuCalendar className="w-3.5 h-3.5 text-primary-medium/40 shrink-0" />
+                              <span>{t('noDeadline')}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Divider Line & Footer */}
+                        <div className="border-t border-primary-medium/10 pt-3 flex items-center justify-between gap-2">
+                          {/* Footer Left: Assignee Avatars */}
+                          <div className="flex items-center -space-x-2 overflow-hidden">
+                            {assignees.length > 0 ? (
+                              assignees.slice(0, 3).map((a) => (
+                                <Image
+                                  key={a.id}
+                                  src={a.avatar || '/Avatar.jpg'}
+                                  alt={a.fullName}
+                                  title={a.fullName}
+                                  width={24}
+                                  height={24}
+                                  unoptimized
+                                  className="w-6 h-6 rounded-full object-cover border-2 border-white shadow-2xs"
+                                />
+                              ))
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-primary-surface border-2 border-white shadow-2xs flex items-center justify-center text-primary-medium/60 text-[10px] font-medium">
+                                -
+                              </div>
+                            )}
+                            {assignees.length > 3 && (
+                              <span className="w-6 h-6 rounded-full bg-primary-medium/20 text-primary-dark font-bold text-[9px] flex items-center justify-center border-2 border-white shadow-2xs">
+                                +{assignees.length - 3}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Footer Right: Media Attachments Count (if any) + Created Date */}
+                          <div className="flex items-center gap-2 text-xs text-primary-medium/75 shrink-0">
+                            {attachmentCount > 0 && (
+                              <>
+                                <div className="flex items-center gap-1 font-semibold text-primary-dark text-xs">
+                                  <LuImage className="w-3.5 h-3.5 text-primary-medium/80 shrink-0" />
+                                  <span>{attachmentCount}</span>
+                                </div>
+                                <span className="text-primary-medium/30">|</span>
+                              </>
+                            )}
+                            <span className="text-[11px] text-primary-medium/80 font-medium">
+                              {formatCardDate(task.createdAt, locale)}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    </motion.div>
                   );
-                })
+                  })}
+                  <AnimatePresence>
+                    {isDropActive && (
+                      <motion.div
+                        layout
+                        initial={{ opacity: 0, scale: 0.95, height: 0 }}
+                        animate={{ opacity: 1, scale: 1, height: 72 }}
+                        exit={{ opacity: 0, scale: 0.95, height: 0 }}
+                        transition={{ type: 'spring', stiffness: 450, damping: 30 }}
+                        className="rounded-xl border-2 border-dashed border-primary-dark/50 bg-primary-surface/60 flex items-center justify-center text-xs font-bold text-primary-dark gap-2 shadow-2xs"
+                      >
+                        <col.Icon className={`w-4 h-4 animate-bounce ${col.iconClass}`} />
+                        <span>{t('columnActions.dropTaskHere')}</span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </>
               )}
-            </div>
+            </motion.div>
           </div>
         );
       })}

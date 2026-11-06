@@ -141,11 +141,14 @@
       "addTask": "Ajouter une tâche",
       "transferSuccess": "{count} {count, plural, =1 {tâche déplacée} other {tâches déplacées}} vers l'étape suivante.",
       "deleteSuccess": "{count} {count, plural, =1 {tâche supprimée} other {tâches supprimées}}.",
-      "clearSuccess": "Toutes les tâches dans « {title} » ont été effacées."
+      "clearSuccess": "Toutes les tâches dans « {title} » ont été effacées.",
+      "taskMoved": "« {title} » déplacée vers {status}.",
+      "dropTaskHere": "Déposer la tâche ici"
     },
     "table": {
       "statusToggle": "Basculer le statut",
       "task": "Tâche",
+      "name": "Nom",
       "assignedTo": "Assigné à",
       "project": "Projet",
       "priority": "Priorité",
@@ -156,6 +159,14 @@
       "generalTask": "Tâche générale",
       "markIncomplete": "Marquer la tâche comme non terminée",
       "markCompleted": "Marquer la tâche comme terminée"
+    },
+    "list": {
+      "name": "Nom",
+      "assignee": "Assigné à",
+      "dueDate": "Date d'échéance",
+      "priority": "Priorité",
+      "collapse": "Réduire la section",
+      "expand": "Développer la section"
     },
     "priority": {
       "low": "Basse",

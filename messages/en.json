@@ -141,11 +141,14 @@
       "addTask": "Add task",
       "transferSuccess": "{count} {count, plural, =1 {task} other {tasks}} moved to next stage.",
       "deleteSuccess": "{count} {count, plural, =1 {task} other {tasks}} deleted.",
-      "clearSuccess": "All tasks in \"{title}\" cleared."
+      "clearSuccess": "All tasks in \"{title}\" cleared.",
+      "taskMoved": "\"{title}\" moved to {status}.",
+      "dropTaskHere": "Drop task here"
     },
     "table": {
       "statusToggle": "Status Toggle",
       "task": "Task",
+      "name": "Name",
       "assignedTo": "Assigned To",
       "project": "Project",
       "priority": "Priority",
@@ -156,6 +159,14 @@
       "generalTask": "General Task",
       "markIncomplete": "Mark task as incomplete",
       "markCompleted": "Mark task as completed"
+    },
+    "list": {
+      "name": "Name",
+      "assignee": "Assignee",
+      "dueDate": "Due date",
+      "priority": "Priority",
+      "collapse": "Collapse section",
+      "expand": "Expand section"
     },
     "priority": {
       "low": "Low",
