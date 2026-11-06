@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -162,16 +163,27 @@ export function TaskBoardView({
   const handleTransferToNext = (colId: TaskStatus, colTasks: Task[]) => {
     if (colTasks.length === 0) return;
     const nextStatus = NEXT_STATUS_MAP[colId];
-    batchUpdateStatusMutation.mutate({
-      taskIds: colTasks.map((t) => t.id),
-      newStatus: nextStatus,
-    });
+    batchUpdateStatusMutation.mutate(
+      {
+        taskIds: colTasks.map((t) => t.id),
+        newStatus: nextStatus,
+      },
+      {
+        onSuccess: () => {
+          toast.success(t('columnActions.transferSuccess', { count: colTasks.length }));
+        },
+      }
+    );
     setActiveMenuColId(null);
   };
 
   const handleConfirmClear = (colTasks: Task[]) => {
     if (colTasks.length === 0) return;
-    batchDeleteMutation.mutate(colTasks.map((t) => t.id));
+    batchDeleteMutation.mutate(colTasks.map((t) => t.id), {
+      onSuccess: () => {
+        toast.success(t('columnActions.clearSuccess', { title: t(STATUS_KEY_MAP[confirmClearColId || colTasks[0]?.status || 'To Do']) }));
+      },
+    });
     setConfirmClearColId(null);
     setActiveMenuColId(null);
   };
@@ -184,7 +196,12 @@ export function TaskBoardView({
 
   const handleDeleteSelected = () => {
     if (selectedTaskIds.size === 0) return;
-    batchDeleteMutation.mutate(Array.from(selectedTaskIds));
+    const count = selectedTaskIds.size;
+    batchDeleteMutation.mutate(Array.from(selectedTaskIds), {
+      onSuccess: () => {
+        toast.success(t('columnActions.deleteSuccess', { count }));
+      },
+    });
     setSelectedTaskIds(new Set());
     setSelectionModeColId(null);
   };

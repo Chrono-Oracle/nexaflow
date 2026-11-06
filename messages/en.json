@@ -136,7 +136,10 @@
       "deleteCount": "Delete ({count})",
       "exitSelection": "Exit selection mode",
       "emptyColumn": "No tasks in {title}",
-      "addTask": "Add task"
+      "addTask": "Add task",
+      "transferSuccess": "{count} {count, plural, =1 {task} other {tasks}} moved to next stage.",
+      "deleteSuccess": "{count} {count, plural, =1 {task} other {tasks}} deleted.",
+      "clearSuccess": "All tasks in \"{title}\" cleared."
     },
     "table": {
       "statusToggle": "Status Toggle",
@@ -176,7 +179,8 @@
       "assignTo": "Assign to",
       "priority": "Priority",
       "creatingTask": "Creating Task...",
-      "addTask": "Add Task"
+      "addTask": "Add Task",
+      "taskCreatedSuccess": "Task created successfully!"
     },
     "assignee": {
       "notAssigned": "Not Assigned",
@@ -195,6 +199,7 @@
     "subtitle": "Select and upload the files of your choice",
     "close": "Close upload modal",
     "dropzoneTitle": "Choose a file or drag & drop it here.",
+    "dropzoneTitleMobile": "Browse files to upload.",
     "dropzoneFormats": "JPEG, PNG, PDF, and MP4 formats, up to 20 MB.",
     "dropzoneNote": "Note: Not more than 20 MB can be uploaded.",
     "browseFile": "Browse File",
@@ -204,6 +209,7 @@
     "cancelUpload": "Cancel upload",
     "deleteFile": "Delete file",
     "done": "Done ({count} {count, plural, =1 {file} other {files}})",
+    "filesAttachedSuccess": "{count} {count, plural, =1 {file} other {files}} attached.",
     "oversizedError": "Note: Not more than 20 MB can be uploaded. ({names} exceeded 20 MB)"
   },
   "richText": {

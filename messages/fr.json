@@ -136,7 +136,10 @@
       "deleteCount": "Supprimer ({count})",
       "exitSelection": "Quitter le mode sélection",
       "emptyColumn": "Aucune tâche dans {title}",
-      "addTask": "Ajouter une tâche"
+      "addTask": "Ajouter une tâche",
+      "transferSuccess": "{count} {count, plural, =1 {tâche déplacée} other {tâches déplacées}} vers l'étape suivante.",
+      "deleteSuccess": "{count} {count, plural, =1 {tâche supprimée} other {tâches supprimées}}.",
+      "clearSuccess": "Toutes les tâches dans « {title} » ont été effacées."
     },
     "table": {
       "statusToggle": "Basculer le statut",
@@ -176,7 +179,8 @@
       "assignTo": "Assigner à",
       "priority": "Priorité",
       "creatingTask": "Création de la tâche...",
-      "addTask": "Ajouter la tâche"
+      "addTask": "Ajouter la tâche",
+      "taskCreatedSuccess": "Tâche créée avec succès !"
     },
     "assignee": {
       "notAssigned": "Non assigné",
@@ -195,6 +199,7 @@
     "subtitle": "Sélectionnez et téléversez les fichiers de votre choix",
     "close": "Fermer la fenêtre de téléversement",
     "dropzoneTitle": "Choisissez un fichier ou glissez-déposez-le ici.",
+    "dropzoneTitleMobile": "Parcourez les fichiers à téléverser.",
     "dropzoneFormats": "Formats JPEG, PNG, PDF et MP4, jusqu'à 20 Mo.",
     "dropzoneNote": "Remarque : Pas plus de 20 Mo ne peuvent être téléversés.",
     "browseFile": "Parcourir",
@@ -204,6 +209,7 @@
     "cancelUpload": "Annuler le téléversement",
     "deleteFile": "Supprimer le fichier",
     "done": "Terminé ({count} {count, plural, =1 {fichier} other {fichiers}})",
+    "filesAttachedSuccess": "{count} {count, plural, =1 {fichier joint} other {fichiers joints}}.",
     "oversizedError": "Remarque : Pas plus de 20 Mo ne peuvent être téléversés. ({names} dépasse 20 Mo)"
   },
   "richText": {

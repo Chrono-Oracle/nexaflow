@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -158,16 +159,27 @@ export function TaskListView({
   const handleTransferToNext = (groupId: TaskStatus, groupTasks: Task[]) => {
     if (groupTasks.length === 0) return;
     const nextStatus = NEXT_STATUS_MAP[groupId];
-    batchUpdateStatusMutation.mutate({
-      taskIds: groupTasks.map((t) => t.id),
-      newStatus: nextStatus,
-    });
+    batchUpdateStatusMutation.mutate(
+      {
+        taskIds: groupTasks.map((t) => t.id),
+        newStatus: nextStatus,
+      },
+      {
+        onSuccess: () => {
+          toast.success(t('columnActions.transferSuccess', { count: groupTasks.length }));
+        },
+      }
+    );
     setActiveMenuGroupId(null);
   };
 
   const handleConfirmClear = (groupTasks: Task[]) => {
     if (groupTasks.length === 0) return;
-    batchDeleteMutation.mutate(groupTasks.map((t) => t.id));
+    batchDeleteMutation.mutate(groupTasks.map((t) => t.id), {
+      onSuccess: () => {
+        toast.success(t('columnActions.clearSuccess', { title: t(STATUS_KEY_MAP[confirmClearGroupId || groupTasks[0]?.status || 'To Do']) }));
+      },
+    });
     setConfirmClearGroupId(null);
     setActiveMenuGroupId(null);
   };
@@ -180,7 +192,12 @@ export function TaskListView({
 
   const handleDeleteSelected = () => {
     if (selectedTaskIds.size === 0) return;
-    batchDeleteMutation.mutate(Array.from(selectedTaskIds));
+    const count = selectedTaskIds.size;
+    batchDeleteMutation.mutate(Array.from(selectedTaskIds), {
+      onSuccess: () => {
+        toast.success(t('columnActions.deleteSuccess', { count }));
+      },
+    });
     setSelectedTaskIds(new Set());
     setSelectionModeGroupId(null);
   };

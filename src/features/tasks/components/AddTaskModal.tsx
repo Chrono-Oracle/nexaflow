@@ -2,6 +2,7 @@
 
 import { useState, useMemo, FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LuX, LuPlus, LuTrash2 } from 'react-icons/lu';
 import { RichTextEditor } from '@/components/ui/RichTextEditor';
@@ -116,6 +117,7 @@ export function AddTaskModal({
       },
       {
         onSuccess: () => {
+          toast.success(t('modal.taskCreatedSuccess'));
           // Reset form state & close
           setTitle('');
           setDescription('');

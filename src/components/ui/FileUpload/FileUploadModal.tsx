@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, DragEvent, ChangeEvent } from 'react';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LuCloudUpload,
@@ -177,6 +178,7 @@ export function FileUploadModal({
     }));
 
     onAttachFiles(finalAttachments);
+    toast.success(t('filesAttachedSuccess', { count: finalAttachments.length }));
     onClose();
   };
 
@@ -260,10 +262,11 @@ export function FileUploadModal({
 
             {/* Dropzone */}
             <div
+              onClick={() => fileInputRef.current?.click()}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-2xl p-6 sm:p-7 text-center transition-all flex flex-col items-center justify-center ${
+              className={`border-2 border-dashed rounded-2xl p-6 sm:p-7 text-center transition-all flex flex-col items-center justify-center cursor-pointer ${
                 isDragging
                   ? 'border-primary bg-primary-surface/60 scale-[1.01]'
                   : 'border-primary-medium/30 bg-[#faf8f5] hover:border-primary-medium/60'
@@ -273,9 +276,14 @@ export function FileUploadModal({
                 <LuCloudUpload className="w-5 h-5 text-primary-medium/80" />
               </div>
 
-              <p className="text-xs sm:text-sm font-semibold text-primary-dark tracking-tight">
+              {/* Responsive Dropzone Title: On desktop shows drag & drop; on mobile only shows Browse */}
+              <p className="hidden sm:block text-xs sm:text-sm font-semibold text-primary-dark tracking-tight">
                 {t('dropzoneTitle')}
               </p>
+              <p className="block sm:hidden text-xs sm:text-sm font-semibold text-primary-dark tracking-tight">
+                {t('dropzoneTitleMobile')}
+              </p>
+
               <p className="text-[11px] text-primary-medium/70 mt-1">
                 {t('dropzoneFormats')}
               </p>
@@ -296,7 +304,10 @@ export function FileUploadModal({
 
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fileInputRef.current?.click();
+                }}
                 className="mt-3.5 px-4 py-2 bg-white hover:bg-primary-surface border border-primary-medium/20 rounded-xl shadow-2xs font-semibold text-xs text-primary-dark transition-all cursor-pointer active:scale-95"
               >
                 {t('browseFile')}
