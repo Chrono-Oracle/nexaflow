@@ -15,12 +15,14 @@ interface AssigneeSelectorProps {
 }
 
 const emptySubscribe = () => () => {};
-const NAME_CHAR_LIMIT = 8;
+const NAME_CHAR_LIMIT = 5;
 
 function truncateAssigneeName(name: string, limit = NAME_CHAR_LIMIT): string {
   if (!name) return '';
-  if (name.length <= limit) return name;
-  return `${name.slice(0, limit)}…`;
+  const trimmed = name.trim();
+  const firstWord = trimmed.split(' ')[0];
+  if (firstWord.length <= limit) return firstWord;
+  return `${firstWord.slice(0, limit)}…`;
 }
 
 export function AssigneeSelector({
@@ -203,73 +205,88 @@ export function AssigneeSelector({
       <div
         ref={containerRef}
         onClick={handleContainerClick}
-        className={`w-full min-h-[44px] bg-[#f7f6f2] hover:bg-[#f3f1ec] focus-within:bg-white border border-primary-medium/15 focus-within:border-primary-dark/40 focus-within:ring-2 focus-within:ring-primary-dark/15 rounded-xl px-3 py-1.5 flex items-center justify-between gap-2 transition-all cursor-text ${
+        className={`w-full min-h-[44px] bg-[#f7f6f2] hover:bg-[#f3f1ec] focus-within:bg-white border border-primary-medium/15 focus-within:border-primary-dark/40 focus-within:ring-2 focus-within:ring-primary-dark/15 rounded-xl px-3 py-2 flex items-center justify-between gap-2 transition-all cursor-text ${
           disabled ? 'opacity-50 pointer-events-none' : ''
         }`}
       >
-        <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
-          {/* Selected Users Chips */}
-          {activeUsers.map((user) => {
-            const displayName = truncateAssigneeName(user.fullName);
-
-            return (
-              <span
-                key={user.id}
-                title={user.fullName}
-                className="inline-flex items-center gap-1.5 bg-white border border-primary-medium/20 rounded-lg pl-1 pr-1.5 py-0.5 shadow-2xs shrink-0 select-none"
-              >
-                <Image
-                  src={user.avatar || '/Avatar.jpg'}
-                  alt={user.fullName}
-                  width={20}
-                  height={20}
-                  unoptimized
-                  className="w-5 h-5 rounded-full object-cover shrink-0 border border-primary-medium/15"
-                />
-                <span className="text-[11px] font-semibold text-primary-dark max-w-[75px] truncate">
-                  {displayName}
-                </span>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRemoveUser(user.id);
-                  }}
-                  aria-label={`Remove ${user.fullName}`}
-                  className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-primary-medium/60 hover:text-primary-dark hover:bg-primary-medium/15 transition-colors cursor-pointer"
-                >
-                  <LuX className="w-2.5 h-2.5" />
-                </button>
-              </span>
-            );
-          })}
-
-          {/* User Icon prefix if no users are selected yet */}
-          {activeUsers.length === 0 && !searchQuery && (
+        {activeUsers.length === 0 ? (
+          <div className="flex items-center gap-2 flex-1 min-w-0">
             <div className="w-5.5 h-5.5 rounded-full bg-primary-medium/15 text-primary-medium/70 flex items-center justify-center shrink-0">
               <LuUser className="w-3.5 h-3.5" />
             </div>
-          )}
+            <input
+              ref={inputRef}
+              type="text"
+              value={searchQuery}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              onFocus={() => {
+                setIsOpen(true);
+                updatePosition();
+              }}
+              placeholder="Not Assigned"
+              className="w-full bg-transparent text-xs font-medium text-primary-dark placeholder:text-primary-medium/75 focus:outline-none"
+            />
+          </div>
+        ) : (
+          <div className="flex-1 min-w-0 space-y-1.5 py-0.5">
+            {/* Strictly Two on a Row Chips Grid */}
+            <div className="grid grid-cols-2 gap-1.5 w-full">
+              {activeUsers.map((user) => {
+                const displayName = truncateAssigneeName(user.fullName);
 
-          {/* Filter / Typing Input */}
-          <input
-            ref={inputRef}
-            type="text"
-            value={searchQuery}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            onFocus={() => {
-              setIsOpen(true);
-              updatePosition();
-            }}
-            placeholder={
-              activeUsers.length === 0
-                ? 'Not Assigned'
-                : 'Add more...'
-            }
-            className="flex-1 min-w-[75px] bg-transparent text-xs font-medium text-primary-dark placeholder:text-primary-medium/75 focus:outline-none py-1"
-          />
-        </div>
+                return (
+                  <span
+                    key={user.id}
+                    title={user.fullName}
+                    className="inline-flex items-center justify-between gap-1 bg-white border border-primary-medium/20 rounded-lg pl-1 pr-1 py-0.5 shadow-2xs min-w-0 select-none"
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                      <Image
+                        src={user.avatar || '/Avatar.jpg'}
+                        alt={user.fullName}
+                        width={18}
+                        height={18}
+                        unoptimized
+                        className="w-4.5 h-4.5 rounded-full object-cover shrink-0 border border-primary-medium/15"
+                      />
+                      <span className="text-[11px] font-semibold text-primary-dark truncate">
+                        {displayName}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveUser(user.id);
+                      }}
+                      aria-label={`Remove ${user.fullName}`}
+                      className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-primary-medium/60 hover:text-primary-dark hover:bg-primary-medium/15 transition-colors cursor-pointer shrink-0"
+                    >
+                      <LuX className="w-2.5 h-2.5" />
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+
+            {/* Inline typing / search input below the 2-on-a-row chips */}
+            <input
+              ref={inputRef}
+              type="text"
+              value={searchQuery}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              onFocus={() => {
+                setIsOpen(true);
+                updatePosition();
+              }}
+              placeholder="Add more..."
+              className="w-full bg-transparent text-xs font-medium text-primary-dark placeholder:text-primary-medium/60 focus:outline-none py-0.5"
+            />
+          </div>
+        )}
 
         {/* Add User Icon Button */}
         <button
@@ -280,7 +297,7 @@ export function AssigneeSelector({
             inputRef.current?.focus();
           }}
           aria-label="Toggle team member dropdown"
-          className="p-1 rounded-lg text-primary-dark hover:bg-primary-medium/10 transition-colors cursor-pointer shrink-0"
+          className="p-1 rounded-lg text-primary-dark hover:bg-primary-medium/10 transition-colors cursor-pointer shrink-0 self-center"
         >
           <LuUserPlus className="w-4 h-4 text-primary-dark" />
         </button>

@@ -234,7 +234,7 @@ export function TaskBoardView({
                   aria-label={`Options for ${col.title}`}
                   title="Column options"
                 >
-                  <LuMoreVertical className="w-4 h-4 stroke-[2.2]" />
+                  <LuEllipsisVertical className="w-4 h-4 stroke-[2.2]" />
                 </button>
 
                 {/* Animated Dropdown Menu with Pop-down and Mild Bounce Effect */}
@@ -260,7 +260,7 @@ export function TaskBoardView({
                         className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left text-xs font-semibold text-primary-dark hover:bg-primary-surface/60 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer group"
                       >
                         <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                          <LuArrowRightCircle className="w-4 h-4" />
+                          <LuCircleArrowRight className="w-4 h-4" />
                         </div>
                         <div className="min-w-0">
                           <div>Transfer to {NEXT_STATUS_MAP[col.id]}</div>
@@ -278,7 +278,7 @@ export function TaskBoardView({
                         className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left text-xs font-semibold text-primary-dark hover:bg-primary-surface/60 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer group"
                       >
                         <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                          <LuCheckSquare className="w-4 h-4" />
+                          <LuSquareCheck className="w-4 h-4" />
                         </div>
                         <div className="min-w-0">
                           <div>Select tasks to delete</div>
