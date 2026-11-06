@@ -8,6 +8,14 @@ const nextConfig: NextConfig = {
   experimental: {
     agentFeedback: true,
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
+    ],
+  },
   // Allow ngrok tunnels and remote dev origins to access Next.js dev resources without cross-origin blocking
   allowedDevOrigins: [
     'vividly-concept-viewless.ngrok-free.dev',

@@ -66,3 +66,36 @@ body {
 .font-elms {
   font-family: var(--font-elms-sans), var(--font-geist-sans), sans-serif;
 }
+
+/* Custom minimalist scrollbar for dashboard columns and widgets */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(115, 88, 64, 0.25) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(115, 88, 64, 0.25);
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(115, 88, 64, 0.45);
+}
+
+/* Hide scrollbar while preserving scroll functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

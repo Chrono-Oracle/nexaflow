@@ -274,6 +274,62 @@ export const storageApi = {
     return true;
   },
 
+  async deleteMultipleTasks(ids: string[]): Promise<boolean> {
+    if (ids.length === 0) return true;
+    const tasks = await storageApi.getTasks();
+    const idSet = new Set(ids);
+    const remainingTasks = tasks.filter((t) => !idSet.has(t.id));
+    setStoredItem(STORAGE_KEYS.TASKS, remainingTasks);
+
+    const affectedProjectIds = new Set(
+      tasks.filter((t) => idSet.has(t.id) && t.projectId).map((t) => t.projectId)
+    );
+
+    for (const pId of affectedProjectIds) {
+      await storageApi.syncProjectStats(pId);
+    }
+
+    await storageApi.addActivity({
+      type: 'task_status_changed',
+      title: 'Tasks deleted',
+      description: `${ids.length} task(s) were removed.`,
+      actorName: currentUser.fullName,
+      actorAvatar: currentUser.avatar,
+    });
+
+    return true;
+  },
+
+  async batchUpdateTaskStatus(taskIds: string[], newStatus: TaskStatus): Promise<boolean> {
+    if (taskIds.length === 0) return true;
+    const tasks = await storageApi.getTasks();
+    const idSet = new Set(taskIds);
+    const affectedProjectIds = new Set<string>();
+
+    tasks.forEach((t) => {
+      if (idSet.has(t.id)) {
+        t.status = newStatus;
+        if (t.projectId) affectedProjectIds.add(t.projectId);
+      }
+    });
+
+    setStoredItem(STORAGE_KEYS.TASKS, tasks);
+
+    for (const pId of affectedProjectIds) {
+      await storageApi.syncProjectStats(pId);
+    }
+
+    await storageApi.addActivity({
+      type: 'task_status_changed',
+      title: 'Tasks status updated',
+      description: `${taskIds.length} task(s) transferred to ${newStatus}.`,
+      actorName: currentUser.fullName,
+      actorAvatar: currentUser.avatar,
+    });
+
+    return true;
+  },
+
   // Recalculates and persists a project's progress % and task count based on its tasks
   async syncProjectStats(projectId: string): Promise<void> {
     const [projects, tasks] = await Promise.all([

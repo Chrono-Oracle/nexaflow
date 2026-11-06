@@ -49,6 +49,8 @@
     "title": "Projects",
     "subtitle": "Your active projects overview",
     "viewAll": "View all",
+    "emptyTitle": "No projects yet",
+    "emptyDesc": "Create your first project to start tracking progress, deadlines and team tasks.",
     "columns": {
       "projectName": "Project Name",
       "status": "Status",
@@ -66,10 +68,52 @@
       "pending": "Pending"
     },
     "priority": {
+      "urgent": "Urgent",
       "high": "High",
       "medium": "Medium",
       "low": "Low"
     }
+  },
+  "asideProjects": {
+    "title": "Projects",
+    "subtitle": "Manage and track all your projects",
+    "filter": "Filter",
+    "demoTitle": "Marketing Campaign",
+    "demoSubtitle": "Q2 marketing campaign planning and execution",
+    "progress": "Progress",
+    "total": "Total",
+    "completed": "Completed",
+    "blocked": "Blocked",
+    "viewDetails": "View Details"
+  },
+  "taskOverview": {
+    "title": "Recent Tasks",
+    "subtitle": "Your active and prioritized daily work items",
+    "viewAll": "View all",
+    "columns": {
+      "task": "Task",
+      "assignedTo": "Assigned To",
+      "project": "Project",
+      "status": "Status",
+      "dueDate": "Due Date"
+    },
+    "status": {
+      "todo": "To-do",
+      "inProgress": "In progress",
+      "completed": "Completed",
+      "inReview": "In review"
+    }
+  },
+  "tasksPage": {
+    "title": "Tasks & Kanban",
+    "subtitle": "Organize, prioritize and track daily actionable work items.",
+    "views": {
+      "board": "Board",
+      "table": "Table",
+      "list": "List"
+    },
+    "searchPlaceholder": "Search task...",
+    "addTask": "Add Task"
   },
   "pages": {
     "dashboardTitle": "Dashboard",

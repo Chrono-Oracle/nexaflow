@@ -1,4 +1,5 @@
-export type ProjectStatus = 'In Progress' | 'Completed' | 'Pending';
+export type ProjectStatus = 'In Progress' | 'Completed' | 'At Risk' | 'In Review' | 'Pending';
+export type ProjectPriority = 'Low' | 'Medium' | 'High' | 'Urgent';
 
 export interface ProjectManager {
   id: string;
@@ -16,6 +17,7 @@ export interface Project {
   manager: ProjectManager;
   deadline: string;
   status: ProjectStatus;
+  priority?: ProjectPriority;
   progress: number;
   color: string;
   createdAt: string;
@@ -26,6 +28,7 @@ export interface Project {
 export interface ProjectFilterState {
   search: string;
   status: ProjectStatus | 'All';
+  priority?: ProjectPriority | 'All';
   sortBy: 'deadline' | 'progress' | 'name';
   sortOrder: 'asc' | 'desc';
   viewMode: 'grid' | 'table';

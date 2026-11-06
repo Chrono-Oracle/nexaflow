@@ -183,6 +183,35 @@ export function useDeleteTaskMutation() {
   });
 }
 
+export function useBatchDeleteTasksMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (ids: string[]) => storageApi.deleteMultipleTasks(ids),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.TASKS });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PROJECTS });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.STATS });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITIES });
+    },
+  });
+}
+
+export function useBatchUpdateTaskStatusMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ taskIds, newStatus }: { taskIds: string[]; newStatus: TaskStatus }) =>
+      storageApi.batchUpdateTaskStatus(taskIds, newStatus),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.TASKS });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PROJECTS });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.STATS });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITIES });
+    },
+  });
+}
+
 // ==========================================
 // TEAM HOOKS
 // ==========================================

@@ -195,7 +195,7 @@ export function DynamicCalendarWidget({ onAddEvent }: DynamicCalendarWidgetProps
         <button
           type="button"
           onClick={onAddEvent}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary-dark text-white text-xs font-semibold shadow-xs hover:bg-primary transition-all active:scale-95 cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-primary-dark text-white text-xs font-medium shadow-xs hover:bg-primary transition-all duration-200 active:scale-95 cursor-pointer"
         >
           <LuPlus className="w-3.5 h-3.5 stroke-[2.5]" aria-hidden="true" />
           <span>{t('addEvent')}</span>
@@ -236,7 +236,7 @@ export function DynamicCalendarWidget({ onAddEvent }: DynamicCalendarWidgetProps
               type="button"
               onClick={handlePrevMonth}
               aria-label="Previous month"
-              className="w-8 h-8 rounded-lg bg-primary-surface/70 border border-primary-medium/20 text-primary-dark hover:bg-primary-surface flex items-center justify-center transition-colors shadow-2xs cursor-pointer active:scale-95"
+              className="w-8 h-8 rounded-md bg-primary-surface/70 border border-primary-medium/20 text-primary-dark hover:bg-primary-surface flex items-center justify-center transition-colors shadow-2xs cursor-pointer active:scale-95"
             >
               <LuChevronLeft className="w-4 h-4 stroke-[2.2]" />
             </button>
@@ -244,7 +244,7 @@ export function DynamicCalendarWidget({ onAddEvent }: DynamicCalendarWidgetProps
               type="button"
               onClick={handleNextMonth}
               aria-label="Next month"
-              className="w-8 h-8 rounded-lg bg-primary-surface/70 border border-primary-medium/20 text-primary-dark hover:bg-primary-surface flex items-center justify-center transition-colors shadow-2xs cursor-pointer active:scale-95"
+              className="w-8 h-8 rounded-md bg-primary-surface/70 border border-primary-medium/20 text-primary-dark hover:bg-primary-surface flex items-center justify-center transition-colors shadow-2xs cursor-pointer active:scale-95"
             >
               <LuChevronRight className="w-4 h-4 stroke-[2.2]" />
             </button>
@@ -298,23 +298,21 @@ export function DynamicCalendarWidget({ onAddEvent }: DynamicCalendarWidgetProps
                       }
                     }}
                     disabled={!cell.isCurrentMonth}
-                    className={`h-11 sm:h-12 rounded-xl p-1.5 flex flex-col justify-between text-left transition-all duration-150 focus:outline-none cursor-pointer ${
-                      !cell.isCurrentMonth
+                    className={`h-11 sm:h-12 rounded-xl p-1.5 flex flex-col justify-between text-left transition-all duration-150 focus:outline-none cursor-pointer ${!cell.isCurrentMonth
                         ? 'opacity-20 text-primary-medium cursor-default bg-transparent'
                         : cell.isToday
-                        ? 'bg-primary-dark text-white font-bold shadow-md ring-2 ring-primary-dark/20 scale-[1.03]'
-                        : isSelected
-                        ? 'bg-[#ede9df] ring-2 ring-primary-dark text-primary-dark font-bold shadow-xs'
-                        : 'bg-[#f6f5f1] text-primary-dark/85 hover:bg-[#edeae2]'
-                    }`}
+                          ? 'bg-primary-dark text-white font-bold shadow-md ring-2 ring-primary-dark/20 scale-[1.03]'
+                          : isSelected
+                            ? 'bg-[#ede9df] ring-2 ring-primary-dark text-primary-dark font-bold shadow-xs'
+                            : 'bg-[#f6f5f1] text-primary-dark/85 hover:bg-[#edeae2]'
+                      }`}
                   >
                     {/* Formatted Day Number with leading zero (e.g. 01, 02, 05, 26) */}
                     <span
-                      className={`text-[11px] tracking-tight ${
-                        cell.isToday
+                      className={`text-[11px] tracking-tight ${cell.isToday
                           ? 'font-bold text-white'
                           : 'font-medium'
-                      }`}
+                        }`}
                     >
                       {String(cell.dayNumber).padStart(2, '0')}
                     </span>
@@ -324,9 +322,8 @@ export function DynamicCalendarWidget({ onAddEvent }: DynamicCalendarWidgetProps
                       {hasDeadlines && cell.isCurrentMonth && (
                         <span
                           title="Deadlines on this day"
-                          className={`w-1.5 h-1.5 rounded-full shadow-2xs ${
-                            cell.isToday ? 'bg-white' : 'bg-primary-dark'
-                          }`}
+                          className={`w-1.5 h-1.5 rounded-full shadow-2xs ${cell.isToday ? 'bg-white' : 'bg-primary-dark'
+                            }`}
                         />
                       )}
                     </div>

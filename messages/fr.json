@@ -49,6 +49,8 @@
     "title": "Projets",
     "subtitle": "Aperçu de vos projets actifs",
     "viewAll": "Voir tout",
+    "emptyTitle": "Aucun projet pour le moment",
+    "emptyDesc": "Créez votre premier projet pour commencer à suivre la progression, les échéances et les tâches.",
     "columns": {
       "projectName": "Nom du projet",
       "status": "Statut",
@@ -66,10 +68,52 @@
       "pending": "En attente"
     },
     "priority": {
+      "urgent": "Urgent",
       "high": "Haute",
       "medium": "Moyenne",
       "low": "Basse"
     }
+  },
+  "asideProjects": {
+    "title": "Projets",
+    "subtitle": "Gérez et suivez tous vos projets",
+    "filter": "Filtrer",
+    "demoTitle": "Campagne marketing",
+    "demoSubtitle": "Planification et exécution de la campagne Q2",
+    "progress": "Progression",
+    "total": "Total",
+    "completed": "Terminées",
+    "blocked": "Bloquées",
+    "viewDetails": "Voir détails"
+  },
+  "taskOverview": {
+    "title": "Tâches Récentes",
+    "subtitle": "Vos éléments de travail quotidiens actifs et prioritaires",
+    "viewAll": "Voir tout",
+    "columns": {
+      "task": "Tâche",
+      "assignedTo": "Assigné à",
+      "project": "Projet",
+      "status": "Statut",
+      "dueDate": "Date d'échéance"
+    },
+    "status": {
+      "todo": "À faire",
+      "inProgress": "En cours",
+      "completed": "Terminée",
+      "inReview": "En revue"
+    }
+  },
+  "tasksPage": {
+    "title": "Tâches & Kanban",
+    "subtitle": "Organisez, priorisez et suivez les éléments d'action quotidiens.",
+    "views": {
+      "board": "Tableau",
+      "table": "Table",
+      "list": "Liste"
+    },
+    "searchPlaceholder": "Rechercher une tâche...",
+    "addTask": "Ajouter une tâche"
   },
   "pages": {
     "dashboardTitle": "Tableau de bord",
