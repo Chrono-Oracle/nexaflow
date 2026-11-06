@@ -4,10 +4,18 @@ import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { LuCheck, LuFlag } from 'react-icons/lu';
-import { Task } from '@/features/tasks/types/task.types';
+import { Task, TaskStatus } from '@/features/tasks/types/task.types';
 import { Project } from '@/features/projects/types/project.types';
 import { getAuthUsers } from '@/data/users';
 import { getProjectPriorityStyle, getTaskStatusStyle } from '@/features/projects/utils/badgeStyles';
+
+const STATUS_KEY_MAP: Record<TaskStatus, string> = {
+  'To Do': 'status.todo',
+  'In Progress': 'status.inProgress',
+  'In Review': 'status.inReview',
+  'Approved': 'status.approved',
+  'Completed': 'status.completed',
+};
 
 interface TaskTableViewProps {
   tasks: Task[];
@@ -162,9 +170,9 @@ export function TaskTableView({
                     </td>
 
                     <td className="py-3.5 px-3">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${statusStyle.badgeClass}`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold shadow-2xs ${statusStyle.badgeClass}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dotColor}`} />
-                        <span>{tTasks(statusStyle.labelKey)}</span>
+                        <span>{tTasks(STATUS_KEY_MAP[task.status] || 'status.todo')}</span>
                       </span>
                     </td>
 

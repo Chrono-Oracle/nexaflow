@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -20,6 +20,8 @@ import {
   LuZap,
   LuBadgeCheck,
   LuCircleCheck,
+  LuLink,
+  LuImage,
 } from 'react-icons/lu';
 import { Task, TaskStatus } from '@/features/tasks/types/task.types';
 import { Project } from '@/features/projects/types/project.types';
@@ -106,6 +108,31 @@ const STATUS_KEY_MAP: Record<TaskStatus, string> = {
   'Completed': 'status.completed',
 };
 
+function formatCardDate(
+  dateStr?: string,
+  locale: string = 'en',
+  options?: { shortYear?: boolean }
+): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+
+  const loc = locale === 'fr' ? 'fr-FR' : 'en-US';
+  const monthOpt = 'long';
+  const yearOpt = options?.shortYear ? '2-digit' : 'numeric';
+
+  return new Intl.DateTimeFormat(loc, {
+    month: monthOpt,
+    day: 'numeric',
+    year: yearOpt,
+  }).format(d);
+}
+
+function cleanDescription(htmlOrText?: string): string {
+  if (!htmlOrText) return '';
+  return htmlOrText.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+}
+
 export function TaskBoardView({
   tasks,
   projects,
@@ -115,7 +142,33 @@ export function TaskBoardView({
 }: TaskBoardViewProps) {
   const t = useTranslations('tasksPage');
   const tBadges = useTranslations('projectOverview');
+  const locale = useLocale();
   const authUsers = useMemo(() => getAuthUsers(), []);
+
+  // Compute stable chronological task numbers for tasks
+  const taskNumberMap = useMemo(() => {
+    const sorted = [...tasks].sort((a, b) => {
+      if (a.taskNumber && b.taskNumber) return a.taskNumber - b.taskNumber;
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      if (timeA !== timeB) return timeA - timeB;
+      return a.id.localeCompare(b.id);
+    });
+
+    const map = new Map<string, number>();
+    let nextNum = 1;
+    for (const task of sorted) {
+      if (task.taskNumber && task.taskNumber > 0) {
+        map.set(task.id, task.taskNumber);
+        if (task.taskNumber >= nextNum) {
+          nextNum = task.taskNumber + 1;
+        }
+      } else {
+        map.set(task.id, nextNum++);
+      }
+    }
+    return map;
+  }, [tasks]);
 
   // Dropdown & multi-selection state
   const [activeMenuColId, setActiveMenuColId] = useState<TaskStatus | null>(null);
@@ -467,6 +520,10 @@ export function TaskBoardView({
                       : [];
                   const priorityStyle = getProjectPriorityStyle(task.priority || 'Medium');
                   const isCardSelected = selectedTaskIds.has(task.id);
+                  const taskNumber = task.taskNumber || taskNumberMap.get(task.id) || 1;
+                  const descPreview = cleanDescription(task.description);
+                  const subtitle = project ? project.name : (descPreview || null);
+                  const attachmentCount = task.attachments?.length || 0;
 
                   return (
                     <div
@@ -478,7 +535,7 @@ export function TaskBoardView({
                           onTaskClick?.(task);
                         }
                       }}
-                      className={`bg-white rounded-xl p-3.5 border transition-all cursor-pointer space-y-2.5 group relative ${
+                      className={`bg-white rounded-2xl p-4 border transition-all cursor-pointer space-y-3 group relative ${
                         isCardSelected
                           ? 'border-red-400 bg-red-50/20 ring-2 ring-red-400/20 shadow-xs'
                           : 'border-primary-medium/15 shadow-2xs hover:shadow-xs hover:border-primary-medium/30'
@@ -486,7 +543,7 @@ export function TaskBoardView({
                     >
                       {/* Checkbox badge when in Selection Mode */}
                       {isSelectionMode && (
-                        <div className="absolute top-3 right-3 z-10">
+                        <div className="absolute top-3.5 right-3.5 z-10">
                           <div
                             className={`w-4.5 h-4.5 rounded-md flex items-center justify-center transition-all ${
                               isCardSelected
@@ -499,11 +556,12 @@ export function TaskBoardView({
                         </div>
                       )}
 
-                      {/* Project Tag & Priority */}
-                      <div className="flex items-center justify-between gap-2 pr-6">
-                        <span className="text-[11px] font-medium text-primary-medium/80 truncate max-w-[140px]">
-                          {project ? project.name : 'General'}
-                        </span>
+                      {/* Top Row: TASK - {taskNumber} on left, Priority Badge on right */}
+                      <div className={`flex items-center justify-between gap-2 ${isSelectionMode ? 'pr-7' : ''}`}>
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-primary-dark/80">
+                          <LuLink className="w-3.5 h-3.5 text-primary-medium/70 shrink-0" />
+                          <span>TASK - {taskNumber}</span>
+                        </div>
                         <span
                           className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold ${priorityStyle.className}`}
                         >
@@ -512,39 +570,80 @@ export function TaskBoardView({
                         </span>
                       </div>
 
-                      {/* Task Title */}
-                      <h4 className="text-xs sm:text-sm font-bold text-primary-dark group-hover:text-primary transition-colors leading-snug">
-                        {task.title}
-                      </h4>
+                      {/* Title & Subtitle */}
+                      <div className="space-y-0.5">
+                        <h4 className="text-sm font-bold text-primary-dark group-hover:text-primary transition-colors leading-snug line-clamp-2">
+                          {task.title}
+                        </h4>
+                        {subtitle && (
+                          <p className="text-xs text-primary-medium/70 font-normal truncate">
+                            {subtitle}
+                          </p>
+                        )}
+                      </div>
 
-                      {/* Deadline & Assignee Avatars */}
-                      <div className="flex items-center justify-between pt-1 border-t border-primary-medium/10 text-xs text-primary-medium/75">
-                        <div className="flex items-center gap-1.5 text-[11px]">
-                          <LuCalendar className="w-3.5 h-3.5 text-primary-medium/60" />
-                          <span>{task.deadline || 'No deadline'}</span>
-                        </div>
+                      {/* Due Date Capsule */}
+                      <div>
+                        {task.deadline ? (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary-surface/80 border border-primary-medium/10 rounded-lg text-xs shadow-2xs">
+                            <LuCalendar className="w-3.5 h-3.5 text-primary-medium/70 shrink-0" />
+                            <span className="text-primary-medium/75 font-normal">{t('dueTo')}</span>
+                            <span className="font-bold text-primary-dark">
+                              {formatCardDate(task.deadline, locale, { shortYear: true })}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary-surface/50 border border-primary-medium/10 rounded-lg text-xs text-primary-medium/60 shadow-2xs">
+                            <LuCalendar className="w-3.5 h-3.5 text-primary-medium/40 shrink-0" />
+                            <span>{t('noDeadline')}</span>
+                          </div>
+                        )}
+                      </div>
 
-                        {assignees.length > 0 && (
-                          <div className="flex items-center -space-x-1.5 overflow-hidden">
-                            {assignees.slice(0, 3).map((a) => (
+                      {/* Divider Line & Footer */}
+                      <div className="border-t border-primary-medium/10 pt-2.5 flex items-center justify-between gap-2">
+                        {/* Footer Left: Assignee Avatars */}
+                        <div className="flex items-center -space-x-2 overflow-hidden">
+                          {assignees.length > 0 ? (
+                            assignees.slice(0, 3).map((a) => (
                               <Image
                                 key={a.id}
                                 src={a.avatar || '/Avatar.jpg'}
                                 alt={a.fullName}
                                 title={a.fullName}
-                                width={22}
-                                height={22}
+                                width={24}
+                                height={24}
                                 unoptimized
-                                className="w-5.5 h-5.5 rounded-full object-cover border border-white shadow-2xs"
+                                className="w-6 h-6 rounded-full object-cover border-2 border-white shadow-2xs"
                               />
-                            ))}
-                            {assignees.length > 3 && (
-                              <span className="w-5.5 h-5.5 rounded-full bg-primary-medium/20 text-primary-dark font-bold text-[9px] flex items-center justify-center border border-white shadow-2xs">
-                                +{assignees.length - 3}
-                              </span>
-                            )}
-                          </div>
-                        )}
+                            ))
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-primary-surface border-2 border-white shadow-2xs flex items-center justify-center text-primary-medium/60 text-[10px] font-medium">
+                              -
+                            </div>
+                          )}
+                          {assignees.length > 3 && (
+                            <span className="w-6 h-6 rounded-full bg-primary-medium/20 text-primary-dark font-bold text-[9px] flex items-center justify-center border-2 border-white shadow-2xs">
+                              +{assignees.length - 3}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Footer Right: Media Attachments Count (if any) + Created Date */}
+                        <div className="flex items-center gap-2 text-xs text-primary-medium/75 shrink-0">
+                          {attachmentCount > 0 && (
+                            <>
+                              <div className="flex items-center gap-1 font-semibold text-primary-dark text-xs">
+                                <LuImage className="w-3.5 h-3.5 text-primary-medium/80 shrink-0" />
+                                <span>{attachmentCount}</span>
+                              </div>
+                              <span className="text-primary-medium/30">|</span>
+                            </>
+                          )}
+                          <span className="text-[11px] text-primary-medium/80 font-medium">
+                            {formatCardDate(task.createdAt, locale)}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   );

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocale, useTranslations } from 'next-intl';
 import { LuCalendar, LuChevronDown, LuChevronLeft, LuChevronRight } from 'react-icons/lu';
 
@@ -37,6 +38,8 @@ export function getTodayDateString(): string {
   return `${year}-${month}-${day}`;
 }
 
+const emptySubscribe = () => () => {};
+
 export function MiniCalendarPicker({
   value,
   onChange,
@@ -49,6 +52,9 @@ export function MiniCalendarPicker({
   const t = useTranslations('datePicker');
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({ display: 'none' });
+  const isMounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
   const [navMonthOffset, setNavMonthOffset] = useState<number | null>(null);
 
   // Base date derived purely from value or fallback to today
@@ -68,12 +74,57 @@ export function MiniCalendarPicker({
     return new Date(baseDate.getFullYear(), baseDate.getMonth() + navMonthOffset, 1);
   }, [baseDate, navMonthOffset]);
 
-  // Close calendar when clicking outside
+  const updatePosition = useCallback(() => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+
+    const calendarHeight = 316;
+    const calendarWidth = Math.max(rect.width, 276);
+
+    const spaceBelow = window.innerHeight - rect.bottom - 16;
+    const spaceAbove = rect.top - 16;
+
+    let top: number;
+    if (spaceBelow < calendarHeight && spaceAbove > spaceBelow) {
+      top = Math.max(16, rect.top - calendarHeight - 6);
+    } else {
+      top = rect.bottom + 6;
+    }
+
+    let left = rect.left;
+    if (left + calendarWidth > window.innerWidth - 16) {
+      left = window.innerWidth - calendarWidth - 16;
+    }
+    if (left < 16) {
+      left = 16;
+    }
+
+    setDropdownStyle({
+      position: 'fixed',
+      top: `${top}px`,
+      left: `${left}px`,
+      width: `${calendarWidth}px`,
+      zIndex: 9999,
+    });
+  }, []);
+
+  // Close calendar when clicking outside & update position on scroll / resize
   useEffect(() => {
     if (!isOpen) return;
 
+    updatePosition();
+
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+
     function handleClickOutside(e: MouseEvent | TouchEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(target) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(target)
+      ) {
         setIsOpen(false);
       }
     }
@@ -81,10 +132,12 @@ export function MiniCalendarPicker({
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('touchstart', handleClickOutside);
     return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('touchstart', handleClickOutside);
     };
-  }, [isOpen]);
+  }, [isOpen, updatePosition]);
 
   const currentYear = viewDate.getFullYear();
   const currentMonth = viewDate.getMonth();
@@ -199,100 +252,107 @@ export function MiniCalendarPicker({
         />
       </button>
 
-      {/* Mini Calendar Dropdown - Exactly same width as field */}
-      {isOpen && (
-        <div className="absolute top-full left-0 mt-1.5 w-full bg-white rounded-2xl p-3 border border-primary-medium/15 shadow-2xl z-40 animate-in fade-in zoom-in-95 duration-150 select-none">
-          {/* Header Row: Month Year + Today + Nav Arrows */}
-          <div className="flex items-center justify-between mb-2.5 px-0.5">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-xs sm:text-sm font-bold text-primary-dark tracking-tight truncate capitalize">
-                {monthYearLabel}
-              </span>
-              <button
-                type="button"
-                onClick={handleGoToday}
-                className="text-[10px] font-semibold text-primary-medium/80 hover:text-primary-dark px-1.5 py-0.5 rounded-md hover:bg-primary-surface transition-colors cursor-pointer shrink-0"
-              >
-                {t('today')}
-              </button>
-            </div>
-
-            <div className="flex items-center gap-1 shrink-0">
-              <button
-                type="button"
-                onClick={handlePrevMonth}
-                aria-label={t('previousMonth')}
-                title={t('previousMonth')}
-                className="w-6 h-6 rounded-md bg-primary-surface/70 border border-primary-medium/20 text-primary-dark hover:bg-primary-surface flex items-center justify-center transition-colors shadow-2xs cursor-pointer active:scale-95"
-              >
-                <LuChevronLeft className="w-3.5 h-3.5 stroke-[2.2]" />
-              </button>
-              <button
-                type="button"
-                onClick={handleNextMonth}
-                aria-label={t('nextMonth')}
-                title={t('nextMonth')}
-                className="w-6 h-6 rounded-md bg-primary-surface/70 border border-primary-medium/20 text-primary-dark hover:bg-primary-surface flex items-center justify-center transition-colors shadow-2xs cursor-pointer active:scale-95"
-              >
-                <LuChevronRight className="w-3.5 h-3.5 stroke-[2.2]" />
-              </button>
-            </div>
-          </div>
-
-          {/* Days of Week Header */}
-          <div className="grid grid-cols-7 gap-1 text-center mb-1.5">
-            {(['su', 'mo', 'tu', 'we', 'th', 'fr', 'sa'] as const).map((d) => (
-              <div key={d} className="text-[10px] font-semibold text-primary-medium/65">
-                {t(`days.${d}`)}
-              </div>
-            ))}
-          </div>
-
-          {/* Animated 7-col Grid */}
-          <div className="grid grid-cols-7 gap-1 w-full">
-            {calendarCells.map((cell) => {
-              const isPastMin = minDate ? cell.dateKey < minDate : false;
-              const isDisabled = !cell.isCurrentMonth || isPastMin;
-              const isSelected = value === cell.dateKey;
-
-              return (
+      {/* Mini Calendar Dropdown via Portal (Out of the modal) */}
+      {isMounted &&
+        isOpen &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            style={dropdownStyle}
+            className="bg-white rounded-2xl p-3 border border-primary-medium/15 shadow-2xl font-elms animate-in fade-in zoom-in-95 duration-150 select-none"
+          >
+            {/* Header Row: Month Year + Today + Nav Arrows */}
+            <div className="flex items-center justify-between mb-2.5 px-0.5">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-xs sm:text-sm font-bold text-primary-dark tracking-tight truncate capitalize">
+                  {monthYearLabel}
+                </span>
                 <button
-                  key={cell.dateKey}
                   type="button"
-                  disabled={isDisabled}
-                  onClick={() => {
-                    if (!isDisabled) {
-                      onChange(cell.dateKey);
-                      setIsOpen(false);
-                    }
-                  }}
-                  className={`h-7.5 sm:h-8 rounded-lg flex items-center justify-center text-center transition-all duration-150 select-none ${
-                    !cell.isCurrentMonth
-                      ? 'opacity-20 text-primary-medium/40 cursor-default bg-transparent'
-                      : isPastMin
-                      ? 'opacity-25 text-primary-medium/50 cursor-not-allowed bg-transparent'
-                      : cell.isToday
-                      ? isSelected
-                        ? 'bg-primary-dark text-white font-bold shadow-xs ring-2 ring-primary-dark/30 scale-102 cursor-pointer'
-                        : 'bg-primary-dark text-white font-bold shadow-xs cursor-pointer'
-                      : isSelected
-                      ? 'bg-[#ede9df] ring-1.5 ring-primary-dark text-primary-dark font-bold shadow-2xs cursor-pointer'
-                      : 'bg-[#f6f5f1] text-primary-dark/85 hover:bg-[#edeae2] cursor-pointer'
-                  }`}
+                  onClick={handleGoToday}
+                  className="text-[10px] font-semibold text-primary-medium/80 hover:text-primary-dark px-1.5 py-0.5 rounded-md hover:bg-primary-surface transition-colors cursor-pointer shrink-0"
                 >
-                  <span
-                    className={`text-[11px] tracking-tight ${
-                      cell.isToday ? 'font-bold text-white' : 'font-medium'
+                  {t('today')}
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={handlePrevMonth}
+                  aria-label={t('previousMonth')}
+                  title={t('previousMonth')}
+                  className="w-6 h-6 rounded-md bg-primary-surface/70 border border-primary-medium/20 text-primary-dark hover:bg-primary-surface flex items-center justify-center transition-colors shadow-2xs cursor-pointer active:scale-95"
+                >
+                  <LuChevronLeft className="w-3.5 h-3.5 stroke-[2.2]" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNextMonth}
+                  aria-label={t('nextMonth')}
+                  title={t('nextMonth')}
+                  className="w-6 h-6 rounded-md bg-primary-surface/70 border border-primary-medium/20 text-primary-dark hover:bg-primary-surface flex items-center justify-center transition-colors shadow-2xs cursor-pointer active:scale-95"
+                >
+                  <LuChevronRight className="w-3.5 h-3.5 stroke-[2.2]" />
+                </button>
+              </div>
+            </div>
+
+            {/* Days of Week Header */}
+            <div className="grid grid-cols-7 gap-1 text-center mb-1.5">
+              {(['su', 'mo', 'tu', 'we', 'th', 'fr', 'sa'] as const).map((d) => (
+                <div key={d} className="text-[10px] font-semibold text-primary-medium/65">
+                  {t(`days.${d}`)}
+                </div>
+              ))}
+            </div>
+
+            {/* Animated 7-col Grid */}
+            <div className="grid grid-cols-7 gap-1 w-full">
+              {calendarCells.map((cell) => {
+                const isPastMin = minDate ? cell.dateKey < minDate : false;
+                const isDisabled = !cell.isCurrentMonth || isPastMin;
+                const isSelected = value === cell.dateKey;
+
+                return (
+                  <button
+                    key={cell.dateKey}
+                    type="button"
+                    disabled={isDisabled}
+                    onClick={() => {
+                      if (!isDisabled) {
+                        onChange(cell.dateKey);
+                        setIsOpen(false);
+                      }
+                    }}
+                    className={`h-7.5 sm:h-8 rounded-lg flex items-center justify-center text-center transition-all duration-150 select-none ${
+                      !cell.isCurrentMonth
+                        ? 'opacity-20 text-primary-medium/40 cursor-default bg-transparent'
+                        : isPastMin
+                        ? 'opacity-25 text-primary-medium/50 cursor-not-allowed bg-transparent'
+                        : cell.isToday
+                        ? isSelected
+                          ? 'bg-primary-dark text-white font-bold shadow-xs ring-2 ring-primary-dark/30 scale-102 cursor-pointer'
+                          : 'bg-primary-dark text-white font-bold shadow-xs cursor-pointer'
+                        : isSelected
+                        ? 'bg-[#ede9df] ring-1.5 ring-primary-dark text-primary-dark font-bold shadow-2xs cursor-pointer'
+                        : 'bg-[#f6f5f1] text-primary-dark/85 hover:bg-[#edeae2] cursor-pointer'
                     }`}
                   >
-                    {String(cell.dayNumber).padStart(2, '0')}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+                    <span
+                      className={`text-[11px] tracking-tight ${
+                        cell.isToday ? 'font-bold text-white' : 'font-medium'
+                      }`}
+                    >
+                      {String(cell.dayNumber).padStart(2, '0')}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

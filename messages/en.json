@@ -114,6 +114,8 @@
     },
     "searchPlaceholder": "Search task...",
     "addTask": "Add Task",
+    "dueTo": "Due to:",
+    "noDeadline": "No deadline",
     "status": {
       "todo": "To Do",
       "inProgress": "In Progress",

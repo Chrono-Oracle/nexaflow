@@ -167,7 +167,39 @@ export const storageApi = {
   // TASKS CRUD
   // ==========================================
   async getTasks(): Promise<Task[]> {
-    return getStoredItem<Task[]>(STORAGE_KEYS.TASKS, INITIAL_TASKS);
+    const tasks = getStoredItem<Task[]>(STORAGE_KEYS.TASKS, INITIAL_TASKS);
+    let hasMissing = false;
+    let maxNum = 0;
+    for (const t of tasks) {
+      if (t.taskNumber) {
+        maxNum = Math.max(maxNum, t.taskNumber);
+      } else {
+        hasMissing = true;
+      }
+    }
+
+    if (hasMissing && tasks.length > 0) {
+      // Sort chronologically (earliest createdAt first)
+      const sorted = [...tasks].sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return timeA - timeB;
+      });
+
+      let seq = 1;
+      for (const t of sorted) {
+        if (!t.taskNumber) {
+          const found = tasks.find((item) => item.id === t.id);
+          if (found) {
+            found.taskNumber = seq;
+          }
+        }
+        seq = Math.max(seq + 1, (t.taskNumber || seq) + 1);
+      }
+      setStoredItem(STORAGE_KEYS.TASKS, tasks);
+    }
+
+    return tasks;
   },
 
   async getTasksByProject(projectId: string): Promise<Task[]> {
@@ -182,10 +214,14 @@ export const storageApi = {
 
   async addTask(task: Omit<Task, 'id' | 'createdAt'>): Promise<Task> {
     const tasks = await storageApi.getTasks();
+    const maxNumber = tasks.reduce((max, t) => Math.max(max, t.taskNumber || 0), 0);
+    const taskNumber = task.taskNumber ?? (maxNumber > 0 ? maxNumber + 1 : tasks.length + 1);
+
     const newTask: Task = {
       ...task,
       id: `task_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      createdAt: new Date().toISOString().split('T')[0],
+      taskNumber,
+      createdAt: new Date().toISOString(),
     };
 
     const updated = [newTask, ...tasks];

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import { LuFlag, LuChevronDown, LuCheck } from 'react-icons/lu';
 import { TaskPriority } from '@/features/tasks/types/task.types';
@@ -50,6 +51,8 @@ interface PrioritySelectorProps {
   disabled?: boolean;
 }
 
+const emptySubscribe = () => () => {};
+
 export function PrioritySelector({
   value,
   onChange,
@@ -58,31 +61,78 @@ export function PrioritySelector({
   const t = useTranslations('tasksPage');
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({ display: 'none' });
+  const isMounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
   const currentOption =
     PRIORITY_OPTIONS.find((p) => p.id === value) || PRIORITY_OPTIONS[1]; // default Medium
 
-  // Dismiss on click outside
+  const updatePosition = useCallback(() => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+
+    const dropdownHeight = 186;
+    const spaceBelow = window.innerHeight - rect.bottom - 16;
+    const spaceAbove = rect.top - 16;
+
+    let top: number;
+    if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
+      top = Math.max(16, rect.top - dropdownHeight - 6);
+    } else {
+      top = rect.bottom + 6;
+    }
+
+    let left = rect.left;
+    const width = rect.width;
+
+    if (left + width > window.innerWidth - 16) {
+      left = window.innerWidth - width - 16;
+    }
+    if (left < 16) {
+      left = 16;
+    }
+
+    setDropdownStyle({
+      position: 'fixed',
+      top: `${top}px`,
+      left: `${left}px`,
+      width: `${width}px`,
+      zIndex: 9999,
+    });
+  }, []);
+
+  // Dismiss on click outside & update position on scroll/resize
   useEffect(() => {
     if (!isOpen) return;
 
-    function handleClickOutside(e: MouseEvent | TouchEvent) {
+    updatePosition();
+
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+
+    function handlePointerDown(e: MouseEvent | TouchEvent) {
+      const target = e.target as Node;
       if (
         containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
+        !containerRef.current.contains(target) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(target)
       ) {
         setIsOpen(false);
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
     };
-  }, [isOpen]);
+  }, [isOpen, updatePosition]);
 
   return (
     <div className="relative font-elms w-full" ref={containerRef}>
@@ -113,48 +163,53 @@ export function PrioritySelector({
         />
       </button>
 
-      {/* Dropdown Menu Options */}
-      {isOpen && (
-        <div
-          role="listbox"
-          className="absolute top-full left-0 mt-1.5 w-full bg-white rounded-2xl shadow-xl border border-primary-medium/15 p-1.5 z-40 animate-in fade-in zoom-in-95 duration-150 select-none"
-        >
-          {PRIORITY_OPTIONS.map((opt) => {
-            const isSelected = value === opt.id;
+      {/* Floating Dropdown Menu Options via Portal (Out of the modal) */}
+      {isMounted &&
+        isOpen &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            role="listbox"
+            style={dropdownStyle}
+            className="bg-white rounded-2xl shadow-2xl border border-primary-medium/15 p-1.5 font-elms animate-in fade-in zoom-in-95 duration-150 select-none"
+          >
+            {PRIORITY_OPTIONS.map((opt) => {
+              const isSelected = value === opt.id;
 
-            return (
-              <button
-                key={opt.id}
-                type="button"
-                role="option"
-                aria-selected={isSelected}
-                onClick={() => {
-                  onChange(opt.id);
-                  setIsOpen(false);
-                }}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition-colors cursor-pointer group ${
-                  isSelected
-                    ? `${opt.selectedBgClass} font-semibold`
-                    : 'hover:bg-primary-surface/40 text-primary-dark'
-                }`}
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0">
-                    <LuFlag className={`w-4 h-4 ${opt.flagClass}`} />
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  onClick={() => {
+                    onChange(opt.id);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition-colors cursor-pointer group ${
+                    isSelected
+                      ? `${opt.selectedBgClass} font-semibold`
+                      : 'hover:bg-primary-surface/40 text-primary-dark'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0">
+                      <LuFlag className={`w-4 h-4 ${opt.flagClass}`} />
+                    </div>
+                    <span className="text-xs font-bold text-primary-dark">
+                      {t(opt.labelKey)}
+                    </span>
                   </div>
-                  <span className="text-xs font-bold text-primary-dark">
-                    {t(opt.labelKey)}
-                  </span>
-                </div>
 
-                {isSelected && (
-                  <LuCheck className="w-4 h-4 text-primary-dark shrink-0 ml-2" />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
+                  {isSelected && (
+                    <LuCheck className="w-4 h-4 text-primary-dark shrink-0 ml-2" />
+                  )}
+                </button>
+              );
+            })}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
