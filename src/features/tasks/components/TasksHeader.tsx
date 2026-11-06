@@ -20,18 +20,21 @@ const VIEW_TABS = [
     labelKey: 'views.board' as const,
     icon: LuKanban,
     iconBg: 'bg-[#2563eb]', // Rich Blue
+    desktopOnly: false,
   },
   {
     id: 'table' as const,
     labelKey: 'views.table' as const,
     icon: LuTable,
     iconBg: 'bg-[#10b981]', // Emerald Green
+    desktopOnly: true,
   },
   {
     id: 'list' as const,
     labelKey: 'views.list' as const,
     icon: LuList,
     iconBg: 'bg-[#64748b]', // Slate Gray
+    desktopOnly: false,
   },
 ];
 
@@ -45,10 +48,13 @@ export function TasksHeader({
   const t = useTranslations('tasksPage');
 
   return (
-    <div className="bg-white rounded-2xl p-4 sm:px-6 sm:py-3.5 border border-primary-medium/15 shadow-xs font-elms">
+    <div
+      data-tasks-header
+      className="sticky top-[112px] md:top-[72px] z-30 bg-white/95 backdrop-blur-md rounded-2xl p-4 sm:px-6 sm:py-3.5 border border-primary-medium/15 shadow-xs font-elms transition-all"
+    >
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        {/* Left: Views Tabs (Board, Table, List) */}
-        <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto md:overflow-visible no-scrollbar border-b md:border-b-0 border-primary-medium/10 pb-2 md:pb-0">
+        {/* Left: Views Tabs (Board, Table [md+ only], List) - fixed in position without horizontal scroll */}
+        <div className="flex items-center gap-1 sm:gap-2 border-b md:border-b-0 border-primary-medium/10 pb-2 md:pb-0 shrink-0">
           {VIEW_TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeView === tab.id;
@@ -58,7 +64,9 @@ export function TasksHeader({
                 key={tab.id}
                 type="button"
                 onClick={() => onViewChange(tab.id)}
-                className={`relative flex items-center gap-2 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors cursor-pointer select-none ${
+                className={`relative ${
+                  tab.desktopOnly ? 'hidden md:flex' : 'flex'
+                } items-center gap-2 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors cursor-pointer select-none shrink-0 ${
                   isActive
                     ? 'text-primary-dark font-bold'
                     : 'text-primary-medium/70 hover:text-primary-dark hover:bg-primary-surface/30'

@@ -197,6 +197,11 @@ export function getAuthUsers(): AuthUser[] {
   return DUMMY_AUTH_USERS;
 }
 
+// Helper to get currently logged in user (defaults to Tankeu Daniel)
+export function getCurrentUser(): AuthUser {
+  return DUMMY_AUTH_USERS[0];
+}
+
 // Helper to find user by ID or email
 export function getAuthUserById(id: string): AuthUser | undefined {
   return DUMMY_AUTH_USERS.find((u) => u.id === id);

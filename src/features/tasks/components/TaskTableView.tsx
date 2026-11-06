@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
-import { LuCheck, LuFlag } from 'react-icons/lu';
+import { LuCheck, LuFlag, LuGitBranchPlus } from 'react-icons/lu';
 import { Task, TaskStatus } from '@/features/tasks/types/task.types';
 import { Project } from '@/features/projects/types/project.types';
 import { getAuthUsers } from '@/data/users';
@@ -110,13 +110,24 @@ export function TaskTableView({
                     </td>
 
                     <td className="py-3.5 px-3">
-                      <span
-                        className={`text-sm font-semibold tracking-tight transition-colors ${
-                          isCompleted ? 'text-primary-dark/60 line-through' : 'text-primary-dark'
-                        }`}
-                      >
-                        {task.title}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-sm font-semibold tracking-tight transition-colors ${
+                            isCompleted ? 'text-primary-dark/60 line-through' : 'text-primary-dark'
+                          }`}
+                        >
+                          {task.title}
+                        </span>
+                        {task.subtasks && task.subtasks.length > 0 && (
+                          <span
+                            className="inline-flex items-center gap-1 text-[11px] text-primary-medium/80 font-bold shrink-0 bg-primary-surface/60 px-1.5 py-0.5 rounded"
+                            title={`${task.subtasks.length} subtasks`}
+                          >
+                            <LuGitBranchPlus className="w-3 h-3 text-primary-medium/80 shrink-0" />
+                            <span>{task.subtasks.length}</span>
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     <td className="py-3.5 px-3">

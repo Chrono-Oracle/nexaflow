@@ -12,6 +12,7 @@ import {
   LuCircleArrowRight,
   LuTrash2,
   LuSquareCheck,
+  LuGitBranchPlus,
   LuX,
   LuCheck,
   LuPlus,
@@ -146,33 +147,16 @@ function LivelyBounceIcon({
   return (
     <motion.div
       animate={{
-        y: [0, -10, 0],
-        scaleX: [1, 0.92, 1.08, 1],
-        scaleY: [1, 1.15, 0.9, 1],
-        rotate: [0, -4, 4, 0],
+        y: [0, -8, 0],
       }}
       transition={{
-        duration: 1.15,
+        duration: 0.9,
         repeat: Infinity,
-        repeatType: 'loop',
-        ease: [0.34, 1.3, 0.64, 1],
+        ease: 'easeInOut',
       }}
-      className="relative flex items-center justify-center shrink-0"
+      className="flex items-center justify-center shrink-0"
     >
-      {/* Soft lively glow behind the icon */}
-      <motion.div
-        animate={{
-          scale: [0.9, 1.35, 0.9],
-          opacity: [0.2, 0.55, 0.2],
-        }}
-        transition={{
-          duration: 1.15,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
-        className="absolute inset-0 rounded-full blur-xs bg-current opacity-30 pointer-events-none"
-      />
-      <Icon className={`relative z-10 ${sizeClass} ${className}`} />
+      <Icon className={`${sizeClass} ${className}`} />
     </motion.div>
   );
 }
@@ -668,6 +652,7 @@ export function TaskBoardView({
                     const descPreview = cleanDescription(task.description);
                     const subtitle = project ? project.name : (descPreview || null);
                     const attachmentCount = task.attachments?.length || 0;
+                    const subtaskCount = task.subtasks?.length || 0;
 
                     return (
                       <motion.div
@@ -790,17 +775,34 @@ export function TaskBoardView({
                             )}
                           </div>
 
-                          {/* Footer Right: Media Attachments Count (if any) + Created Date */}
+                          {/* Footer Right: Indicators (Attachments & Subtasks) + Created Date */}
                           <div className="flex items-center gap-2 text-xs text-primary-medium/75 shrink-0">
+                            {/* Attachment Count */}
                             {attachmentCount > 0 && (
-                              <>
-                                <div className="flex items-center gap-1 font-semibold text-primary-dark text-xs">
-                                  <LuImage className="w-3.5 h-3.5 text-primary-medium/80 shrink-0" />
-                                  <span>{attachmentCount}</span>
-                                </div>
-                                <span className="text-primary-medium/30">|</span>
-                              </>
+                              <div
+                                className="flex items-center gap-1 font-semibold text-primary-dark text-xs"
+                                title={t('attachmentsCount', { count: attachmentCount })}
+                              >
+                                <LuImage className="w-3.5 h-3.5 text-primary-medium/80 shrink-0" />
+                                <span>{attachmentCount}</span>
+                              </div>
                             )}
+
+                            {/* Subtask Count */}
+                            {subtaskCount > 0 && (
+                              <div
+                                className="flex items-center gap-1 font-semibold text-primary-dark text-xs"
+                                title={t('subtasksCount', { count: subtaskCount })}
+                              >
+                                <LuGitBranchPlus className="w-3.5 h-3.5 text-primary-medium/80 shrink-0" />
+                                <span>{subtaskCount}</span>
+                              </div>
+                            )}
+
+                            {(attachmentCount > 0 || subtaskCount > 0) && (
+                              <span className="text-primary-medium/30">|</span>
+                            )}
+
                             <span className="text-[11px] text-primary-medium/80 font-medium">
                               {formatCardDate(task.createdAt, locale)}
                             </span>

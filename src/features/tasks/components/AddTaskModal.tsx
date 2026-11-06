@@ -1,15 +1,26 @@
 'use client';
 
-import { useState, useMemo, FormEvent } from 'react';
+import { useState, useMemo, useRef, useEffect, FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LuX, LuPlus, LuTrash2 } from 'react-icons/lu';
+import {
+  LuX,
+  LuPlus,
+  LuTrash2,
+  LuGripVertical,
+  LuGitBranchPlus,
+} from 'react-icons/lu';
 import { RichTextEditor } from '@/components/ui/RichTextEditor';
 import { MiniCalendarPicker, getTodayDateString } from '@/components/ui/DatePicker';
 import { AssigneeSelector } from './AssigneeSelector';
 import { PrioritySelector } from './PrioritySelector';
-import { TaskPriority, TaskStatus, TaskAttachment } from '@/features/tasks/types/task.types';
+import {
+  TaskPriority,
+  TaskStatus,
+  TaskAttachment,
+  Subtask,
+} from '@/features/tasks/types/task.types';
 import { FileUploadModal, FileIconBadge } from '@/components/ui/FileUpload';
 import { useAddTaskMutation, useProjectsQuery } from '@/hooks/useDashboardData';
 import { AuthUser } from '@/data/users';
@@ -18,6 +29,12 @@ interface AddTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultStatus?: TaskStatus;
+}
+
+function generateSubtaskId(): string {
+  return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `sub_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
 export function AddTaskModal({
@@ -34,6 +51,113 @@ export function AddTaskModal({
   const [selectedUsers, setSelectedUsers] = useState<AuthUser[]>([]);
   const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+
+  // Subtasks state & drag/reorder
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+  const pendingFocusIdRef = useRef<string | null>(null);
+  const [draggedSubtaskIndex, setDraggedSubtaskIndex] = useState<number | null>(null);
+  const [dragOverSubtaskIndex, setDragOverSubtaskIndex] = useState<number | null>(null);
+  const [dragOverPosition, setDragOverPosition] = useState<'top' | 'bottom' | null>(null);
+  const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
+
+  // Automatically focus newly added subtask input and scroll into view
+  useEffect(() => {
+    if (pendingFocusIdRef.current) {
+      const el = inputRefs.current.get(pendingFocusIdRef.current);
+      if (el) {
+        el.focus();
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+      pendingFocusIdRef.current = null;
+    }
+  }, [subtasks]);
+
+  const handleAddSubtask = () => {
+    const newId = generateSubtaskId();
+    pendingFocusIdRef.current = newId;
+    setSubtasks((prev) => [...prev, { id: newId, title: '', completed: false }]);
+  };
+
+  const handleRemoveSubtask = (id: string) => {
+    setSubtasks((prev) => prev.filter((s) => s.id !== id));
+  };
+
+  const handleSubtaskTitleChange = (id: string, newTitle: string) => {
+    setSubtasks((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, title: newTitle } : s))
+    );
+  };
+
+  const handleSubtaskKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    currentIndex: number
+  ) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const newId = generateSubtaskId();
+      pendingFocusIdRef.current = newId;
+      setSubtasks((prev) => {
+        const copy = [...prev];
+        copy.splice(currentIndex + 1, 0, { id: newId, title: '', completed: false });
+        return copy;
+      });
+    } else if (
+      e.key === 'Backspace' &&
+      subtasks[currentIndex].title === '' &&
+      subtasks.length > 1
+    ) {
+      e.preventDefault();
+      const prevSubtask = subtasks[currentIndex - 1];
+      if (prevSubtask) {
+        pendingFocusIdRef.current = prevSubtask.id;
+      }
+      setSubtasks((prev) => prev.filter((_, idx) => idx !== currentIndex));
+    }
+  };
+
+  const handleSubtaskDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedSubtaskIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleSubtaskDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const rect = e.currentTarget.getBoundingClientRect();
+    const offsetY = e.clientY - rect.top;
+    const position = offsetY < rect.height / 2 ? 'top' : 'bottom';
+    setDragOverSubtaskIndex(index);
+    setDragOverPosition(position);
+  };
+
+  const handleSubtaskDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    if (draggedSubtaskIndex === null || draggedSubtaskIndex === targetIndex) {
+      setDraggedSubtaskIndex(null);
+      setDragOverSubtaskIndex(null);
+      setDragOverPosition(null);
+      return;
+    }
+
+    setSubtasks((prev) => {
+      const list = [...prev];
+      const [moved] = list.splice(draggedSubtaskIndex, 1);
+      const insertAt =
+        dragOverPosition === 'top'
+          ? targetIndex > draggedSubtaskIndex
+            ? targetIndex - 1
+            : targetIndex
+          : targetIndex >= draggedSubtaskIndex
+          ? targetIndex
+          : targetIndex + 1;
+      list.splice(Math.max(0, Math.min(insertAt, list.length)), 0, moved);
+      return list;
+    });
+
+    setDraggedSubtaskIndex(null);
+    setDragOverSubtaskIndex(null);
+    setDragOverPosition(null);
+  };
 
   const { data: projects = [] } = useProjectsQuery();
   const addTaskMutation = useAddTaskMutation();
@@ -114,6 +238,9 @@ export function AddTaskModal({
         assigneeId: selectedUsers[0]?.id,
         assigneeIds: selectedUsers.map((u) => u.id),
         attachments,
+        subtasks: subtasks
+          .map((s) => ({ id: s.id, title: s.title.trim(), completed: s.completed }))
+          .filter((s) => s.title.length > 0),
       },
       {
         onSuccess: () => {
@@ -125,6 +252,7 @@ export function AddTaskModal({
           setDueDate('');
           setSelectedUsers([]);
           setAttachments([]);
+          setSubtasks([]);
           onClose();
         },
       }
@@ -342,6 +470,113 @@ export function AddTaskModal({
                   onChange={setPriority}
                 />
               </div>
+            </div>
+
+            {/* 5. Subtasks Section (at the bottom of Assign to & Priority) */}
+            <div className="space-y-2 pt-1">
+              {/* Animated Subtasks List with fixed max height and internal scroll once it passes */}
+              {subtasks.length > 0 && (
+                <div className="max-h-36 sm:max-h-40 overflow-y-auto custom-scrollbar space-y-2 pr-1 p-0.5">
+                  <AnimatePresence initial={false}>
+                    {subtasks.map((subtask, index) => {
+                      const isDragging = draggedSubtaskIndex === index;
+                      const isDropTarget = dragOverSubtaskIndex === index;
+
+                      return (
+                        <motion.div
+                          key={subtask.id}
+                          layout
+                          initial={{ opacity: 0, height: 0, y: -8, scale: 0.98 }}
+                          animate={{ opacity: 1, height: 'auto', y: 0, scale: 1 }}
+                          exit={{ opacity: 0, height: 0, y: -8, scale: 0.98 }}
+                          transition={{
+                            type: 'spring',
+                            damping: 28,
+                            stiffness: 420,
+                            mass: 0.8,
+                          }}
+                          className="relative"
+                        >
+                          {/* Drop insertion line indicator */}
+                          {isDropTarget && dragOverPosition === 'top' && (
+                            <div className="absolute -top-1 left-2 right-2 h-0.5 bg-primary-dark rounded-full shadow-sm z-20 pointer-events-none" />
+                          )}
+                          {isDropTarget && dragOverPosition === 'bottom' && (
+                            <div className="absolute -bottom-1 left-2 right-2 h-0.5 bg-primary-dark rounded-full shadow-sm z-20 pointer-events-none" />
+                          )}
+
+                          <div
+                            draggable
+                            onDragStart={(e) => handleSubtaskDragStart(e, index)}
+                            onDragEnd={() => {
+                              setDraggedSubtaskIndex(null);
+                              setDragOverSubtaskIndex(null);
+                              setDragOverPosition(null);
+                            }}
+                            onDragOver={(e) => handleSubtaskDragOver(e, index)}
+                            onDrop={(e) => handleSubtaskDrop(e, index)}
+                            className={`group flex items-center gap-2.5 px-3 py-2 bg-[#f7f6f2] hover:bg-[#f3f1ec] focus-within:bg-white border border-primary-medium/15 focus-within:border-primary-dark/40 focus-within:ring-2 focus-within:ring-primary-dark/15 rounded-xl transition-all ${
+                              isDragging
+                                ? 'opacity-35 border-dashed border-primary-dark/40'
+                                : ''
+                            }`}
+                          >
+                            {/* 6-dot drag handle on left */}
+                            <div
+                              className="w-4 flex items-center justify-center shrink-0 cursor-grab active:cursor-grabbing text-primary-medium/40 hover:text-primary-dark opacity-0 group-hover:opacity-100 transition-opacity"
+                              title={t('modal.dragToReorderSubtask')}
+                            >
+                              <LuGripVertical className="w-4 h-4" />
+                            </div>
+
+                            {/* Automatic dynamic number badge */}
+                            <span className="text-xs font-bold text-primary-medium/80 min-w-[20px] text-right shrink-0 select-none">
+                              {index + 1}.
+                            </span>
+
+                            {/* Subtask Title input */}
+                            <input
+                              ref={(el) => {
+                                if (el) inputRefs.current.set(subtask.id, el);
+                                else inputRefs.current.delete(subtask.id);
+                              }}
+                              type="text"
+                              value={subtask.title}
+                              onChange={(e) =>
+                                handleSubtaskTitleChange(subtask.id, e.target.value)
+                              }
+                              onKeyDown={(e) => handleSubtaskKeyDown(e, index)}
+                              placeholder={t('modal.subtaskPlaceholder')}
+                              className="flex-1 min-w-0 bg-transparent text-xs sm:text-sm font-medium text-primary-dark placeholder:text-primary-medium/50 focus:outline-none"
+                            />
+
+                            {/* Option to remove subtask on extreme right */}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveSubtask(subtask.id)}
+                              className="p-1 rounded-md text-primary-medium/50 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer shrink-0"
+                              title={t('modal.removeSubtask')}
+                              aria-label={t('modal.removeSubtask')}
+                            >
+                              <LuX className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              {/* "Add subtask" button matching uploaded reference UI */}
+              <button
+                type="button"
+                onClick={handleAddSubtask}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border border-dashed border-primary-medium/25 hover:border-primary-dark/40 bg-[#f7f6f2]/80 hover:bg-[#f3f1ec] text-xs sm:text-sm font-semibold text-primary-dark/80 hover:text-primary-dark transition-all cursor-pointer shadow-2xs group"
+              >
+                <LuGitBranchPlus className="w-4 h-4 text-primary-medium/70 group-hover:text-primary-dark transition-colors shrink-0" />
+                <span>{t('modal.addSubtask')}</span>
+              </button>
             </div>
           </div>
 

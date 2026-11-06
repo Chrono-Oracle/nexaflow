@@ -124,7 +124,7 @@ export function Sidebar() {
         mass: 0.8,
       }}
       className="hidden md:flex sticky top-18 z-30 flex-col justify-between shrink-0 select-none rounded-md border px-2 pt-5 pb-4 overflow-hidden"
-      style={{ height: 'calc(92vh - 66px)' }}
+      style={{ height: 'calc(96vh - 66px)' }}
     >
       {/* Top Main Navigation Items */}
       <nav className="flex flex-col gap-2 w-full">

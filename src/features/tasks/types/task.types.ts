@@ -11,6 +11,23 @@ export interface TaskAttachment {
   uploadedAt: string;
 }
 
+export interface Subtask {
+  id: string;
+  title: string;
+  completed?: boolean;
+  note?: string;
+  assigneeId?: string;
+}
+
+export interface TaskComment {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  content: string;
+  createdAt: string;
+}
+
 export interface Task {
   id: string;
   taskNumber?: number;
@@ -24,6 +41,8 @@ export interface Task {
   assigneeId?: string;
   assigneeIds?: string[];
   attachments?: TaskAttachment[];
+  subtasks?: Subtask[];
+  comments?: TaskComment[];
   createdAt: string;
 }
 

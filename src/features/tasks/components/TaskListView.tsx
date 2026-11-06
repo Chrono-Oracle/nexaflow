@@ -12,6 +12,7 @@ import {
   LuCircleArrowRight,
   LuTrash2,
   LuSquareCheck,
+  LuGitBranchPlus,
   LuX,
   LuPlus,
   LuChevronDown,
@@ -215,33 +216,16 @@ function LivelyBounceIcon({
   return (
     <motion.div
       animate={{
-        y: [0, -10, 0],
-        scaleX: [1, 0.92, 1.08, 1],
-        scaleY: [1, 1.15, 0.9, 1],
-        rotate: [0, -4, 4, 0],
+        y: [0, -8, 0],
       }}
       transition={{
-        duration: 1.15,
+        duration: 0.9,
         repeat: Infinity,
-        repeatType: 'loop',
-        ease: [0.34, 1.3, 0.64, 1],
+        ease: 'easeInOut',
       }}
-      className="relative flex items-center justify-center shrink-0"
+      className="flex items-center justify-center shrink-0"
     >
-      {/* Soft lively glow behind the icon */}
-      <motion.div
-        animate={{
-          scale: [0.9, 1.35, 0.9],
-          opacity: [0.2, 0.55, 0.2],
-        }}
-        transition={{
-          duration: 1.15,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
-        className="absolute inset-0 rounded-full blur-xs bg-current opacity-30 pointer-events-none"
-      />
-      <Icon className={`relative z-10 ${sizeClass} ${className}`} />
+      <Icon className={`${sizeClass} ${className}`} />
     </motion.div>
   );
 }
@@ -1074,6 +1058,18 @@ export function TaskListView({
                                       >
                                         <LuPaperclip className="w-2.5 h-2.5" />
                                         <span>{task.attachments.length}</span>
+                                      </span>
+                                    )}
+
+                                  {/* Subtasks count badge */}
+                                  {task.subtasks &&
+                                    task.subtasks.length > 0 && (
+                                      <span
+                                        className="inline-flex items-center gap-0.5 text-[10px] text-primary-medium/70 font-bold shrink-0 bg-primary-surface/60 px-1 py-0.5 rounded"
+                                        title={`${task.subtasks.length} subtasks`}
+                                      >
+                                        <LuGitBranchPlus className="w-2.5 h-2.5" />
+                                        <span>{task.subtasks.length}</span>
                                       </span>
                                     )}
 

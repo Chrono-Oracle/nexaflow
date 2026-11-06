@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   TasksHeader,
   TaskViewMode,
@@ -9,6 +9,7 @@ import { TaskBoardView } from '@/features/tasks/components/TaskBoardView';
 import { TaskTableView } from '@/features/tasks/components/TaskTableView';
 import { TaskListView } from '@/features/tasks/components/TaskListView';
 import { AddTaskModal } from '@/features/tasks/components/AddTaskModal';
+import { TaskDetailView } from '@/features/tasks/components/TaskDetailView';
 import {
   useTasksQuery,
   useProjectsQuery,
@@ -21,10 +22,16 @@ export default function TasksPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [modalDefaultStatus, setModalDefaultStatus] = useState<TaskStatus>('To Do');
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
   const { data: tasks = [] } = useTasksQuery();
   const { data: projects = [] } = useProjectsQuery();
   const updateStatusMutation = useUpdateTaskStatusMutation();
+
+  const selectedTask = useMemo(
+    () => tasks.find((t) => t.id === selectedTaskId) || null,
+    [tasks, selectedTaskId]
+  );
 
   const handleToggleTask = (task: Task) => {
     const newStatus: TaskStatus =
@@ -36,6 +43,19 @@ export default function TasksPage() {
     setModalDefaultStatus(status);
     setIsAddModalOpen(true);
   };
+
+  // On smaller screens, Table View is not available. Automatically fallback to Board View.
+  useEffect(() => {
+    function handleResize() {
+      if (window.innerWidth < 768 && activeView === 'table') {
+        setActiveView('board');
+      }
+    }
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [activeView]);
 
   return (
     <div className="font-elms w-full space-y-6 pb-12">
@@ -56,6 +76,7 @@ export default function TasksPage() {
             projects={projects}
             searchQuery={searchQuery}
             onAddTask={(status) => handleOpenAddTask(status || 'To Do')}
+            onTaskClick={(task) => setSelectedTaskId(task.id)}
           />
         )}
 
@@ -65,6 +86,7 @@ export default function TasksPage() {
             projects={projects}
             searchQuery={searchQuery}
             onToggleTask={handleToggleTask}
+            onTaskClick={(task) => setSelectedTaskId(task.id)}
           />
         )}
 
@@ -75,6 +97,7 @@ export default function TasksPage() {
             searchQuery={searchQuery}
             onToggleTask={handleToggleTask}
             onAddTask={(status) => handleOpenAddTask(status || 'To Do')}
+            onTaskClick={(task) => setSelectedTaskId(task.id)}
           />
         )}
       </div>
@@ -84,6 +107,14 @@ export default function TasksPage() {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         defaultStatus={modalDefaultStatus}
+      />
+
+      {/* Task Detail View matching reference UI */}
+      <TaskDetailView
+        task={selectedTask}
+        projects={projects}
+        isOpen={selectedTask !== null}
+        onClose={() => setSelectedTaskId(null)}
       />
     </div>
   );
