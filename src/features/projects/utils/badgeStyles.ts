@@ -86,6 +86,7 @@ export function getPriorityButtonStyles(priority: ProjectPriority) {
 
 export function getTaskStatusStyle(status: TaskStatus = 'To Do'): {
   label: string;
+  labelKey: string;
   dotColor: string;
   className: string;
   badgeClass: string;
@@ -94,6 +95,7 @@ export function getTaskStatusStyle(status: TaskStatus = 'To Do'): {
     case 'To Do':
       return {
         label: 'To Do',
+        labelKey: 'tasksPage.status.todo',
         dotColor: 'bg-amber-500',
         className: 'bg-amber-500/10 text-amber-700 border-amber-200/60',
         badgeClass: 'bg-[#fffbeb] text-[#d97706] border border-[#fef3c7]',
@@ -101,6 +103,7 @@ export function getTaskStatusStyle(status: TaskStatus = 'To Do'): {
     case 'In Progress':
       return {
         label: 'In Progress',
+        labelKey: 'tasksPage.status.inProgress',
         dotColor: 'bg-blue-500',
         className: 'bg-blue-500/10 text-blue-700 border-blue-200/60',
         badgeClass: 'bg-[#eef4ff] text-[#3b82f6] border border-[#dbeafe]',
@@ -108,6 +111,7 @@ export function getTaskStatusStyle(status: TaskStatus = 'To Do'): {
     case 'In Review':
       return {
         label: 'In Review',
+        labelKey: 'tasksPage.status.inReview',
         dotColor: 'bg-purple-500',
         className: 'bg-purple-500/10 text-purple-700 border-purple-200/60',
         badgeClass: 'bg-[#faf5ff] text-[#9333ea] border border-[#f3e8ff]',
@@ -115,6 +119,7 @@ export function getTaskStatusStyle(status: TaskStatus = 'To Do'): {
     case 'Approved':
       return {
         label: 'Approved',
+        labelKey: 'tasksPage.status.approved',
         dotColor: 'bg-teal-500',
         className: 'bg-teal-500/10 text-teal-700 border-teal-200/60',
         badgeClass: 'bg-[#f0fdfa] text-[#0d9488] border border-[#ccfbf1]',
@@ -123,6 +128,7 @@ export function getTaskStatusStyle(status: TaskStatus = 'To Do'): {
     default:
       return {
         label: 'Completed',
+        labelKey: 'tasksPage.status.completed',
         dotColor: 'bg-emerald-500',
         className: 'bg-emerald-500/10 text-emerald-700 border-emerald-200/60',
         badgeClass: 'bg-[#ecfdf5] text-[#10b981] border border-[#d1fae5]',

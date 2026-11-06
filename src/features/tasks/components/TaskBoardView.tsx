@@ -97,6 +97,14 @@ const NEXT_STATUS_MAP: Record<TaskStatus, TaskStatus> = {
   'Completed': 'To Do',
 };
 
+const STATUS_KEY_MAP: Record<TaskStatus, string> = {
+  'To Do': 'status.todo',
+  'In Progress': 'status.inProgress',
+  'In Review': 'status.inReview',
+  'Approved': 'status.approved',
+  'Completed': 'status.completed',
+};
+
 export function TaskBoardView({
   tasks,
   projects,
@@ -104,6 +112,7 @@ export function TaskBoardView({
   onAddTask,
   onTaskClick,
 }: TaskBoardViewProps) {
+  const t = useTranslations('tasksPage');
   const tBadges = useTranslations('projectOverview');
   const authUsers = useMemo(() => getAuthUsers(), []);
 
@@ -215,7 +224,7 @@ export function TaskBoardView({
                 className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold shadow-2xs ${col.tagClass}`}
               >
                 <col.Icon className={`w-3.5 h-3.5 shrink-0 ${col.iconClass}`} />
-                <span className="tracking-tight">{col.title}</span>
+                <span className="tracking-tight">{t(STATUS_KEY_MAP[col.id])}</span>
                 <span
                   className={`ml-0.5 text-[11px] font-extrabold px-1.5 py-0.2 rounded-full shadow-2xs leading-tight ${col.countClass}`}
                 >
@@ -231,8 +240,8 @@ export function TaskBoardView({
                     setActiveMenuColId((prev) => (prev === col.id ? null : col.id))
                   }
                   className="p-1.5 rounded-lg text-primary-medium/70 hover:text-primary-dark hover:bg-primary-surface transition-colors cursor-pointer"
-                  aria-label={`Options for ${col.title}`}
-                  title="Column options"
+                  aria-label={t('columnActions.optionsFor', { title: t(STATUS_KEY_MAP[col.id]) })}
+                  title={t('columnActions.optionsFor', { title: t(STATUS_KEY_MAP[col.id]) })}
                 >
                   <LuEllipsisVertical className="w-4 h-4 stroke-[2.2]" />
                 </button>
@@ -263,9 +272,13 @@ export function TaskBoardView({
                           <LuCircleArrowRight className="w-4 h-4" />
                         </div>
                         <div className="min-w-0">
-                          <div>Transfer to {NEXT_STATUS_MAP[col.id]}</div>
+                          <div>
+                            {t('columnActions.transferTo', {
+                              status: t(STATUS_KEY_MAP[NEXT_STATUS_MAP[col.id]]),
+                            })}
+                          </div>
                           <div className="text-[10px] text-primary-medium/70 font-normal truncate">
-                            Move {colTasks.length} task{colTasks.length === 1 ? '' : 's'} to next box
+                            {t('columnActions.transferSub', { count: colTasks.length })}
                           </div>
                         </div>
                       </button>
@@ -281,9 +294,9 @@ export function TaskBoardView({
                           <LuSquareCheck className="w-4 h-4" />
                         </div>
                         <div className="min-w-0">
-                          <div>Select tasks to delete</div>
+                          <div>{t('columnActions.selectToDelete')}</div>
                           <div className="text-[10px] text-primary-medium/70 font-normal truncate">
-                            Pick 2 or more tasks to delete
+                            {t('columnActions.selectToDeleteSub')}
                           </div>
                         </div>
                       </button>
@@ -302,9 +315,9 @@ export function TaskBoardView({
                           <LuTrash2 className="w-4 h-4" />
                         </div>
                         <div className="min-w-0">
-                          <div>Clear all tasks</div>
+                          <div>{t('columnActions.clearAll')}</div>
                           <div className="text-[10px] text-red-500/80 font-normal truncate">
-                            Delete all {colTasks.length} task{colTasks.length === 1 ? '' : 's'} on this card
+                            {t('columnActions.clearAllSub', { count: colTasks.length })}
                           </div>
                         </div>
                       </button>
@@ -324,7 +337,10 @@ export function TaskBoardView({
                   className="p-2.5 bg-red-50 border border-red-200 rounded-xl mb-3 text-xs space-y-2 overflow-hidden"
                 >
                   <p className="font-semibold text-red-900 leading-tight">
-                    Clear all {colTasks.length} task{colTasks.length === 1 ? '' : 's'} in &ldquo;{col.title}&rdquo;?
+                    {t('columnActions.confirmClear', {
+                      count: colTasks.length,
+                      title: t(STATUS_KEY_MAP[col.id]),
+                    })}
                   </p>
                   <div className="flex items-center gap-2">
                     <button
@@ -332,14 +348,14 @@ export function TaskBoardView({
                       onClick={() => handleConfirmClear(colTasks)}
                       className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors cursor-pointer text-xs shadow-2xs"
                     >
-                      Yes, clear all
+                      {t('columnActions.yesClearAll')}
                     </button>
                     <button
                       type="button"
                       onClick={() => setConfirmClearColId(null)}
                       className="px-2.5 py-1 bg-white hover:bg-primary-surface text-primary-dark font-medium border border-primary-medium/20 rounded-lg transition-colors cursor-pointer text-xs"
                     >
-                      Cancel
+                      {t('columnActions.cancel')}
                     </button>
                   </div>
                 </motion.div>
@@ -371,7 +387,10 @@ export function TaskBoardView({
                       className="w-3.5 h-3.5 rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
                     />
                     <span className="font-bold text-primary-dark">
-                      {selectedTaskIds.size} / {colTasks.length} selected
+                      {t('columnActions.selectedCount', {
+                        selected: selectedTaskIds.size,
+                        total: colTasks.length,
+                      })}
                     </span>
                   </label>
 
@@ -383,7 +402,7 @@ export function TaskBoardView({
                       className="px-2.5 py-1 rounded-lg font-bold bg-red-600 hover:bg-red-700 text-white disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs transition-colors cursor-pointer flex items-center gap-1 text-[11px]"
                     >
                       <LuTrash2 className="w-3 h-3" />
-                      <span>Delete ({selectedTaskIds.size})</span>
+                      <span>{t('columnActions.deleteCount', { count: selectedTaskIds.size })}</span>
                     </button>
                     <button
                       type="button"
@@ -392,7 +411,7 @@ export function TaskBoardView({
                         setSelectedTaskIds(new Set());
                       }}
                       className="p-1 rounded-lg text-primary-medium/80 hover:text-primary-dark hover:bg-primary-surface transition-colors cursor-pointer"
-                      title="Exit selection mode"
+                      title={t('columnActions.exitSelection')}
                     >
                       <LuX className="w-3.5 h-3.5" />
                     </button>
@@ -406,7 +425,7 @@ export function TaskBoardView({
               {colTasks.length === 0 ? (
                 <div className="h-44 border-2 border-dashed border-primary-medium/15 rounded-xl flex flex-col items-center justify-center p-4 text-center">
                   <p className="text-xs font-medium text-primary-medium/60">
-                    No tasks in {col.title}
+                    {t('columnActions.emptyColumn', { title: t(STATUS_KEY_MAP[col.id]) })}
                   </p>
                   <button
                     type="button"
@@ -414,7 +433,7 @@ export function TaskBoardView({
                     className="mt-2 text-xs font-semibold text-primary-dark hover:underline cursor-pointer inline-flex items-center gap-1"
                   >
                     <LuPlus className="w-3.5 h-3.5" />
-                    <span>Add task</span>
+                    <span>{t('columnActions.addTask')}</span>
                   </button>
                 </div>
               ) : (

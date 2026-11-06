@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, useMemo, useSyncExternalStore } from 'react';
+import { useTranslations } from 'next-intl';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { LuUser, LuUserPlus, LuCheck, LuX, LuPlus } from 'react-icons/lu';
@@ -32,6 +33,7 @@ export function AssigneeSelector({
   onSelectUser,
   disabled = false,
 }: AssigneeSelectorProps) {
+  const t = useTranslations('tasksPage');
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const isMounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
@@ -224,7 +226,7 @@ export function AssigneeSelector({
                 setIsOpen(true);
                 updatePosition();
               }}
-              placeholder="Not Assigned"
+              placeholder={t('assignee.notAssigned')}
               className="w-full bg-transparent text-xs font-medium text-primary-dark placeholder:text-primary-medium/75 focus:outline-none"
             />
           </div>
@@ -261,7 +263,7 @@ export function AssigneeSelector({
                         e.stopPropagation();
                         handleRemoveUser(user.id);
                       }}
-                      aria-label={`Remove ${user.fullName}`}
+                      aria-label={t('assignee.removeUser', { name: user.fullName })}
                       className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-primary-medium/60 hover:text-primary-dark hover:bg-primary-medium/15 transition-colors cursor-pointer shrink-0"
                     >
                       <LuX className="w-2.5 h-2.5" />
@@ -282,7 +284,7 @@ export function AssigneeSelector({
                 setIsOpen(true);
                 updatePosition();
               }}
-              placeholder="Add more..."
+              placeholder={t('assignee.addMorePlaceholder')}
               className="w-full bg-transparent text-xs font-medium text-primary-dark placeholder:text-primary-medium/60 focus:outline-none py-0.5"
             />
           </div>
@@ -296,7 +298,7 @@ export function AssigneeSelector({
             setIsOpen((prev) => !prev);
             inputRef.current?.focus();
           }}
-          aria-label="Toggle team member dropdown"
+          aria-label={t('assignee.toggleDropdown')}
           className="p-1 rounded-lg text-primary-dark hover:bg-primary-medium/10 transition-colors cursor-pointer shrink-0 self-center"
         >
           <LuUserPlus className="w-4 h-4 text-primary-dark" />
@@ -316,7 +318,7 @@ export function AssigneeSelector({
             {activeUsers.length > 0 ? (
               <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-primary-medium/10 px-2 pt-0.5">
                 <span className="text-[11px] font-semibold text-primary-medium/80">
-                  {activeUsers.length} assigned
+                  {t('assignee.assignedCount', { count: activeUsers.length })}
                 </span>
                 <button
                   type="button"
@@ -327,12 +329,12 @@ export function AssigneeSelector({
                   }}
                   className="text-[11px] font-semibold text-red-600 hover:text-red-700 hover:underline cursor-pointer"
                 >
-                  Clear all
+                  {t('assignee.clearAll')}
                 </button>
               </div>
             ) : (
               <div className="px-2 pb-1.5 mb-1.5 border-b border-primary-medium/10 text-[11px] font-semibold text-primary-medium/75">
-                Assign team members
+                {t('assignee.assignTeamMembers')}
               </div>
             )}
 
@@ -340,7 +342,7 @@ export function AssigneeSelector({
             <div className="space-y-1">
               {filteredUsers.length === 0 ? (
                 <div className="py-5 text-center text-xs text-primary-medium/70">
-                  No team members matching &ldquo;{searchQuery}&rdquo;
+                  {t('assignee.noMatchingMembers', { query: searchQuery })}
                 </div>
               ) : (
                 filteredUsers.map((user) => {
@@ -380,7 +382,7 @@ export function AssigneeSelector({
                             <span>{user.fullName}</span>
                             {isSelected && (
                               <span className="text-[10px] font-semibold text-primary-medium/80 bg-primary-medium/15 px-1.5 py-0.2 rounded">
-                                Selected
+                                {t('assignee.selected')}
                               </span>
                             )}
                           </div>

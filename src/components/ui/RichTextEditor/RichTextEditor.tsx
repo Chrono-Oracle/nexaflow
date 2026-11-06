@@ -12,6 +12,7 @@ interface RichTextEditorProps {
   showBlockArrow?: boolean;
   showAlignment?: boolean;
   showQuote?: boolean;
+  onOpenUploadModal?: () => void;
 }
 
 const DEFAULT_ACTIVE_FORMATS: ActiveFormats = {
@@ -35,6 +36,7 @@ export function RichTextEditor({
   showBlockArrow = true,
   showAlignment = true,
   showQuote = true,
+  onOpenUploadModal,
 }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const [activeFormats, setActiveFormats] = useState<ActiveFormats>(DEFAULT_ACTIVE_FORMATS);
@@ -133,6 +135,7 @@ export function RichTextEditor({
         showBlockArrow={showBlockArrow}
         showAlignment={showAlignment}
         showQuote={showQuote}
+        onOpenUpload={onOpenUploadModal}
       />
 
       {/* Editor Content Area */}

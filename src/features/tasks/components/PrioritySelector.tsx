@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { LuFlag, LuChevronDown, LuCheck } from 'react-icons/lu';
 import { TaskPriority } from '@/features/tasks/types/task.types';
 
 export interface PriorityOption {
   id: TaskPriority;
-  label: string;
+  labelKey: string;
   flagClass: string;
   badgeClass: string;
   selectedBgClass: string;
@@ -15,28 +16,28 @@ export interface PriorityOption {
 export const PRIORITY_OPTIONS: PriorityOption[] = [
   {
     id: 'Low',
-    label: 'Low',
+    labelKey: 'priority.low',
     flagClass: 'text-[#2563eb] fill-[#2563eb]',
     badgeClass: 'bg-[#eff6ff] text-[#2563eb] border border-[#bfdbfe]',
     selectedBgClass: 'bg-[#eff6ff]/80 text-[#2563eb]',
   },
   {
     id: 'Medium',
-    label: 'Medium',
+    labelKey: 'priority.medium',
     flagClass: 'text-[#d97706] fill-[#d97706]',
     badgeClass: 'bg-[#fffbeb] text-[#d97706] border border-[#fef3c7]',
     selectedBgClass: 'bg-[#fffbeb]/80 text-[#d97706]',
   },
   {
     id: 'High',
-    label: 'High',
+    labelKey: 'priority.high',
     flagClass: 'text-[#ea580c] fill-[#ea580c]',
     badgeClass: 'bg-[#fff7ed] text-[#ea580c] border border-[#fed7aa]',
     selectedBgClass: 'bg-[#fff7ed]/80 text-[#ea580c]',
   },
   {
     id: 'Urgent',
-    label: 'Urgent',
+    labelKey: 'priority.urgent',
     flagClass: 'text-[#dc2626] fill-[#dc2626]',
     badgeClass: 'bg-[#fef2f2] text-[#dc2626] border border-[#fecaca]',
     selectedBgClass: 'bg-[#fef2f2]/80 text-[#dc2626]',
@@ -54,6 +55,7 @@ export function PrioritySelector({
   onChange,
   disabled = false,
 }: PrioritySelectorProps) {
+  const t = useTranslations('tasksPage');
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -100,7 +102,7 @@ export function PrioritySelector({
             <LuFlag className={`w-4 h-4 ${currentOption.flagClass}`} />
           </div>
           <span className="text-xs sm:text-sm font-semibold text-primary-dark truncate">
-            {currentOption.label}
+            {t(currentOption.labelKey)}
           </span>
         </div>
 
@@ -141,7 +143,7 @@ export function PrioritySelector({
                     <LuFlag className={`w-4 h-4 ${opt.flagClass}`} />
                   </div>
                   <span className="text-xs font-bold text-primary-dark">
-                    {opt.label}
+                    {t(opt.labelKey)}
                   </span>
                 </div>
 

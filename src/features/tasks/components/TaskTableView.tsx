@@ -24,6 +24,7 @@ export function TaskTableView({
   onToggleTask,
   onTaskClick,
 }: TaskTableViewProps) {
+  const tTasks = useTranslations('tasksPage');
   const tBadges = useTranslations('projectOverview');
   const authUsers = useMemo(() => getAuthUsers(), []);
 
@@ -44,21 +45,21 @@ export function TaskTableView({
           <thead>
             <tr className="border-b border-primary-medium/10 text-xs font-medium text-primary-medium/60">
               <th scope="col" className="py-3 px-3 pl-0 w-8">
-                <span className="sr-only">Status Toggle</span>
+                <span className="sr-only">{tTasks('table.statusToggle')}</span>
               </th>
-              <th scope="col" className="py-3 px-3 font-medium">Task</th>
-              <th scope="col" className="py-3 px-3 font-medium">Assigned To</th>
-              <th scope="col" className="py-3 px-3 font-medium">Project</th>
-              <th scope="col" className="py-3 px-3 font-medium">Priority</th>
-              <th scope="col" className="py-3 px-3 font-medium">Status</th>
-              <th scope="col" className="py-3 px-3 pr-0 font-medium">Due Date</th>
+              <th scope="col" className="py-3 px-3 font-medium">{tTasks('table.task')}</th>
+              <th scope="col" className="py-3 px-3 font-medium">{tTasks('table.assignedTo')}</th>
+              <th scope="col" className="py-3 px-3 font-medium">{tTasks('table.project')}</th>
+              <th scope="col" className="py-3 px-3 font-medium">{tTasks('table.priority')}</th>
+              <th scope="col" className="py-3 px-3 font-medium">{tTasks('table.status')}</th>
+              <th scope="col" className="py-3 px-3 pr-0 font-medium">{tTasks('table.dueDate')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-primary-medium/10">
             {filteredTasks.length === 0 ? (
               <tr>
                 <td colSpan={7} className="py-12 text-center text-xs text-primary-medium/70">
-                  No tasks found matching your search.
+                  {tTasks('table.noTasksFound')}
                 </td>
               </tr>
             ) : (
@@ -89,7 +90,7 @@ export function TaskTableView({
                     >
                       <button
                         type="button"
-                        aria-label={`Mark task as ${isCompleted ? 'incomplete' : 'completed'}`}
+                        aria-label={isCompleted ? tTasks('table.markIncomplete') : tTasks('table.markCompleted')}
                         className={`w-4.5 h-4.5 rounded flex items-center justify-center transition-all cursor-pointer ${
                           isCompleted
                             ? 'bg-primary-dark border border-primary-dark text-white shadow-2xs'
@@ -139,7 +140,7 @@ export function TaskTableView({
                           </>
                         ) : (
                           <span className="text-xs font-medium text-primary-medium/60 tracking-tight whitespace-nowrap">
-                            Unassigned
+                            {tTasks('table.unassigned')}
                           </span>
                         )}
                       </div>
@@ -147,7 +148,7 @@ export function TaskTableView({
 
                     <td className="py-3.5 px-3">
                       <span className="text-xs font-normal text-primary-medium/85 truncate block max-w-44">
-                        {project ? project.name : 'General Task'}
+                        {project ? project.name : tTasks('table.generalTask')}
                       </span>
                     </td>
 
@@ -163,7 +164,7 @@ export function TaskTableView({
                     <td className="py-3.5 px-3">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${statusStyle.badgeClass}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dotColor}`} />
-                        <span>{statusStyle.label}</span>
+                        <span>{tTasks(statusStyle.labelKey)}</span>
                       </span>
                     </td>
 

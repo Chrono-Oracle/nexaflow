@@ -35,6 +35,7 @@ interface RichTextToolbarProps {
   showBlockArrow?: boolean;
   showAlignment?: boolean;
   showQuote?: boolean;
+  onOpenUpload?: () => void;
 }
 
 const FORMAT_BLOCK_OPTIONS = [
@@ -51,6 +52,7 @@ export function RichTextToolbar({
   showBlockArrow = true,
   showAlignment = true,
   showQuote = true,
+  onOpenUpload,
 }: RichTextToolbarProps) {
   const [showBlockMenu, setShowBlockMenu] = useState(false);
   const [showAlignMenu, setShowAlignMenu] = useState(false);
@@ -88,6 +90,10 @@ export function RichTextToolbar({
   };
 
   const handleInsertImage = () => {
+    if (onOpenUpload) {
+      onOpenUpload();
+      return;
+    }
     const url = window.prompt('Enter image URL (e.g. https://images.unsplash.com/...):');
     if (url) {
       onExecuteCommand('insertImage', url);
