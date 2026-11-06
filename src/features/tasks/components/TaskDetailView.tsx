@@ -191,6 +191,52 @@ export function TaskDetailView({
     };
   }, [isOpen]);
 
+  // Dynamic measurement of <main> bounding rect for Full Screen mode
+  const [mainBounds, setMainBounds] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const mainEl = document.querySelector('main');
+    if (!mainEl) return;
+
+    const measureMain = () => {
+      const rect = mainEl.getBoundingClientRect();
+      const effectiveTop = Math.max(rect.top, 72);
+      const effectiveHeight = Math.max(
+        window.innerHeight - effectiveTop - 16,
+        400
+      );
+      setMainBounds({
+        left: rect.left,
+        top: effectiveTop,
+        width: rect.width,
+        height: effectiveHeight,
+      });
+    };
+
+    measureMain();
+
+    const ro = new ResizeObserver(() => {
+      measureMain();
+    });
+    ro.observe(mainEl);
+
+    window.addEventListener('resize', measureMain);
+    window.addEventListener('scroll', measureMain, { passive: true });
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', measureMain);
+      window.removeEventListener('scroll', measureMain);
+    };
+  }, [isOpen, layoutMode]);
+
   const handleStartEditTitle = () => {
     if (activeTask) setTitleDraft(activeTask.title);
     setIsEditingTitle(true);
@@ -436,14 +482,9 @@ export function TaskDetailView({
     );
   };
 
-  // Layout mode container styling
-  const layoutContainerClasses: Record<TaskDetailLayoutMode, string> = {
-    sidebar:
-      'right-3 sm:right-5 lg:right-6 w-[calc(100vw-1.5rem)] sm:w-[440px] md:w-[470px] lg:w-[490px] xl:w-[510px]',
-    modal:
-      'left-3 right-3 sm:left-auto sm:right-auto sm:w-[480px] md:w-[520px] lg:w-[560px] xl:w-[600px] mx-auto inset-x-0',
-    full: 'left-3 right-3 sm:left-6 sm:right-6 lg:left-8 lg:right-8 w-auto',
-  };
+  const isTwoColumn = layoutMode === 'modal' || layoutMode === 'full';
+  const effectiveTab =
+    isTwoColumn && activeTab === 'comments' ? 'subtasks' : activeTab;
 
   // Download All Handler
   const handleDownloadAll = () => {
@@ -451,47 +492,193 @@ export function TaskDetailView({
     toast.success(t('taskDetail.downloadAllSuccess'));
   };
 
+  // Dedicated Left Comments Column (for 2-column Modal and Full Screen layouts)
+  const renderCommentsSidebar = () => (
+    <div
+      className={`w-full shrink-0 border-b md:border-b-0 md:border-r border-primary-medium/10 flex flex-col bg-[#faf9f6] min-h-0 overflow-hidden transition-all duration-200 ${
+        layoutMode === 'full'
+          ? 'md:w-[45%] lg:w-[43%] xl:w-[42%] 2xl:w-[40%] min-w-[380px] sm:min-w-[420px] max-w-[980px]'
+          : 'md:w-[320px] lg:w-[350px] xl:w-[380px]'
+      }`}
+    >
+      {/* Comments Column Header */}
+      <div className="px-5 py-4 border-b border-primary-medium/10 flex items-center justify-between bg-white shrink-0 select-none">
+        <div className="flex items-center gap-2">
+          <LuMessageSquare className="w-4 h-4 text-primary-medium/80" />
+          <span className="text-xs sm:text-sm font-bold text-primary-dark">
+            {t('taskDetail.comments')}
+          </span>
+        </div>
+        {commentsList.length > 0 && (
+          <span className="w-5 h-5 rounded-full bg-primary-surface text-primary-dark text-[11px] font-extrabold flex items-center justify-center border border-primary-medium/20 shadow-2xs">
+            {commentsList.length}
+          </span>
+        )}
+      </div>
+
+      {/* Comments Stream */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-5 space-y-3.5">
+        {commentsList.length === 0 ? (
+          <div className="h-full min-h-[180px] flex flex-col items-center justify-center text-center p-6 text-primary-medium/60 border border-dashed border-primary-medium/20 rounded-2xl">
+            <LuMessageSquare className="w-7 h-7 mb-2.5 text-primary-medium/35" />
+            <p className="text-xs sm:text-sm font-medium">{t('taskDetail.noComments')}</p>
+          </div>
+        ) : (
+          commentsList.map((comm) => (
+            <div
+              key={comm.id}
+              className="flex items-start gap-3 bg-white border border-primary-medium/15 rounded-2xl p-3.5 shadow-2xs"
+            >
+              {comm.userAvatar ? (
+                <Image
+                  src={comm.userAvatar}
+                  alt={comm.userName}
+                  width={28}
+                  height={28}
+                  unoptimized
+                  className="w-7 h-7 rounded-full object-cover shrink-0 mt-0.5 border border-primary-medium/10"
+                />
+              ) : (
+                <span className="w-7 h-7 rounded-full bg-blue-600 text-white font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">
+                  {comm.userName.slice(0, 2).toUpperCase()}
+                </span>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-1.5">
+                  <span className="text-xs sm:text-sm font-bold text-primary-dark truncate">
+                    {comm.userName}
+                  </span>
+                  <span className="text-[10px] text-primary-medium/60 shrink-0">
+                    {formatCommentTime(comm.createdAt, locale)}
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-primary-dark/85 mt-1 leading-relaxed">
+                  {comm.content}
+                </p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Pinned Bottom Composer */}
+      <div className="p-3.5 sm:p-4 border-t border-primary-medium/10 bg-white shrink-0">
+        <div className="flex items-center gap-2.5">
+          <input
+            type="text"
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleAddComment();
+            }}
+            placeholder={t('taskDetail.addCommentPlaceholder')}
+            className="flex-1 text-xs sm:text-sm bg-[#faf9f5] border border-primary-medium/25 rounded-xl px-3.5 py-2.5 text-primary-dark placeholder:text-primary-medium/50 focus:outline-none focus:ring-2 focus:ring-primary-dark/20"
+          />
+          <button
+            type="button"
+            disabled={!commentText.trim()}
+            onClick={handleAddComment}
+            className="p-2.5 rounded-xl bg-primary-dark hover:bg-primary text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-2xs shrink-0"
+            title={t('taskDetail.send')}
+            aria-label={t('taskDetail.send')}
+          >
+            <LuSend className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <>
       <AnimatePresence>
+        {/* Subtle backdrop for Modal view */}
+        {isOpen && activeTask && layoutMode === 'modal' && (
+          <motion.div
+            key="task-detail-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={onClose}
+            className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px]"
+          />
+        )}
+
         {isOpen && activeTask && (
           /* Task Detail Panel: Configurable layout mode (Sidebar, Modal, Full screen) with smooth spring exit */
           <motion.div
             key="task-detail-panel"
             ref={panelRef}
-            initial={{
-              opacity: 0,
-              x: layoutMode === 'sidebar' ? 360 : 0,
-              y: layoutMode !== 'sidebar' ? 24 : 0,
-              scale: layoutMode === 'modal' ? 0.95 : 1,
-            }}
-            animate={{
-              opacity: 1,
-              x: 0,
-              y: 0,
-              scale: 1,
-            }}
-            exit={{
-              opacity: 0,
-              x: layoutMode === 'sidebar' ? 420 : 0,
-              y: layoutMode === 'modal' ? 24 : 0,
-              scale: layoutMode === 'modal' ? 0.95 : layoutMode === 'full' ? 0.98 : 1,
-              transition: {
-                duration: 0.28,
-                ease: [0.32, 0.72, 0, 1],
-              },
-            }}
+            initial={
+              layoutMode === 'sidebar'
+                ? { opacity: 0, x: 360 }
+                : layoutMode === 'modal'
+                ? { opacity: 0, scale: 0.94, y: 16 }
+                : { opacity: 0, scale: 0.98 }
+            }
+            animate={
+              layoutMode === 'sidebar'
+                ? { opacity: 1, x: 0 }
+                : layoutMode === 'modal'
+                ? { opacity: 1, scale: 1, y: 0 }
+                : { opacity: 1, scale: 1 }
+            }
+            exit={
+              layoutMode === 'sidebar'
+                ? {
+                    opacity: 0,
+                    x: 420,
+                    transition: { duration: 0.28, ease: [0.32, 0.72, 0, 1] },
+                  }
+                : layoutMode === 'modal'
+                ? {
+                    opacity: 0,
+                    scale: 0.94,
+                    y: 16,
+                    transition: { duration: 0.24, ease: [0.32, 0.72, 0, 1] },
+                  }
+                : {
+                    opacity: 0,
+                    scale: 0.98,
+                    transition: { duration: 0.22, ease: [0.32, 0.72, 0, 1] },
+                  }
+            }
             transition={{
               type: 'spring',
               damping: 32,
               stiffness: 340,
               mass: 0.8,
             }}
-            style={{
-              top: `${topOffsetPx}px`,
-              height: `calc(98vh - ${topOffsetPx}px)`,
-            }}
-            className={`fixed z-50 pointer-events-auto bg-white rounded-3xl shadow-2xl border border-primary-medium/20 flex flex-col overflow-hidden font-elms ${layoutContainerClasses[layoutMode]}`}
+            style={
+              layoutMode === 'sidebar'
+                ? {
+                    top: `${topOffsetPx}px`,
+                    height: `calc(98vh - ${topOffsetPx}px)`,
+                  }
+                : layoutMode === 'full'
+                ? mainBounds
+                  ? {
+                      left: `${mainBounds.left}px`,
+                      top: `${mainBounds.top}px`,
+                      width: `${mainBounds.width}px`,
+                      height: `${mainBounds.height}px`,
+                    }
+                  : {
+                      top: '74px',
+                      height: 'calc(100vh - 86px)',
+                    }
+                : undefined
+            }
+            className={`fixed z-50 pointer-events-auto bg-white shadow-2xl border border-primary-medium/20 flex flex-col overflow-hidden font-elms ${
+              layoutMode === 'sidebar'
+                ? 'rounded-3xl right-3 sm:right-5 lg:right-6 w-[calc(100vw-1.5rem)] sm:w-[440px] md:w-[470px] lg:w-[490px] xl:w-[510px]'
+                : layoutMode === 'modal'
+                ? 'rounded-3xl left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 w-[94vw] max-w-5xl xl:max-w-6xl h-[88vh] max-h-[820px]'
+                : `rounded-2xl ${
+                    !mainBounds ? 'left-3 right-3 md:left-[276px] md:right-6' : ''
+                  }`
+            }`}
           >
           {/* Top Bar matching reference UI:
               [ ⤢ Project Name / Status ]  ······  [ ✎  ···  ⤢  ✕ ] */}
@@ -719,45 +906,60 @@ export function TaskDetailView({
             </div>
           </div>
 
-          {/* Scrollable Content Area */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar px-5 sm:px-7 py-5 space-y-6">
-            {/* Task Title (Editable) */}
-            <div>
-              {isEditingTitle ? (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={titleDraft}
-                    onChange={(e) => setTitleDraft(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleSaveTitle();
-                      if (e.key === 'Escape') setIsEditingTitle(false);
-                    }}
-                    autoFocus
-                    className="flex-1 text-xl sm:text-2xl font-extrabold text-primary-dark border-b-2 border-primary-dark bg-primary-surface/20 px-2 py-1 rounded focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSaveTitle}
-                    className="px-3 py-1 bg-primary-dark text-white text-xs font-semibold rounded-lg hover:bg-primary cursor-pointer"
-                  >
-                    {t('taskDetail.save')}
-                  </button>
-                </div>
-              ) : (
-                <h1
-                  onClick={handleStartEditTitle}
-                  className="text-2xl sm:text-3xl font-extrabold text-primary-dark tracking-tight leading-tight hover:opacity-85 cursor-pointer transition-opacity"
-                  title={t('taskDetail.editTitle')}
-                >
-                  {activeTask.title}
-                </h1>
-              )}
-            </div>
+          {/* Content Area: 2-column layout for Modal & Full screen; single-column for Sidebar */}
+          <div
+            className={`flex-1 min-h-0 ${
+              isTwoColumn
+                ? 'flex flex-col md:flex-row overflow-hidden'
+                : 'flex flex-col overflow-hidden'
+            }`}
+          >
+            {/* Left Column: Dedicated Comments Feed (Modal & Full Screen views) */}
+            {isTwoColumn && renderCommentsSidebar()}
 
-            {/* Properties List matching reference UI:
-                Status, Due date, Assignee, Tags */}
-            <div className="space-y-3 pt-1 text-xs sm:text-sm">
+            {/* Right Column (or Full Width in Sidebar mode): Main Task Details */}
+            <div
+              className={`flex-1 min-w-0 flex flex-col overflow-y-auto custom-scrollbar space-y-7 pb-12 ${
+                isTwoColumn ? 'px-6 sm:px-9 py-7 bg-white' : 'px-5 sm:px-7 py-6'
+              }`}
+            >
+              {/* Task Title (Editable) */}
+              <div className="pb-1">
+                {isEditingTitle ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={titleDraft}
+                      onChange={(e) => setTitleDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveTitle();
+                        if (e.key === 'Escape') setIsEditingTitle(false);
+                      }}
+                      autoFocus
+                      className="flex-1 text-xl sm:text-2xl font-extrabold text-primary-dark border-b-2 border-primary-dark bg-primary-surface/20 px-2 py-1 rounded focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSaveTitle}
+                      className="px-3 py-1 bg-primary-dark text-white text-xs font-semibold rounded-lg hover:bg-primary cursor-pointer"
+                    >
+                      {t('taskDetail.save')}
+                    </button>
+                  </div>
+                ) : (
+                  <h1
+                    onClick={handleStartEditTitle}
+                    className="text-2xl sm:text-3xl font-extrabold text-primary-dark tracking-tight leading-tight hover:opacity-85 cursor-pointer transition-opacity"
+                    title={t('taskDetail.editTitle')}
+                  >
+                    {activeTask.title}
+                  </h1>
+                )}
+              </div>
+
+              {/* Properties List matching reference UI:
+                  Status, Due date, Assignee, Tags */}
+              <div className="space-y-4 pt-1.5 text-xs sm:text-sm">
               {/* 1. Status Row */}
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2 text-primary-medium/70 w-28 shrink-0 font-medium">
@@ -918,8 +1120,8 @@ export function TaskDetailView({
             {/* Attachments Section matching reference UI:
                 Attachment (count)  ······  Download All
                 [ Card 1 ] [ Card 2 ] [ + ] */}
-            <div className="space-y-2.5 pt-1">
-              <div className="flex items-center justify-between">
+            <div className="space-y-3 pt-1">
+              <div className="flex items-center justify-between select-none">
                 <div className="flex items-center gap-2 text-xs font-bold text-primary-dark">
                   <LuPaperclip className="w-4 h-4 text-primary-medium/70 shrink-0" />
                   <span>
@@ -942,7 +1144,7 @@ export function TaskDetailView({
               </div>
 
               {/* Attachments Cards Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {attachmentsList.map((att) => (
                   <div
                     key={att.id}
@@ -988,21 +1190,21 @@ export function TaskDetailView({
             </div>
 
             {/* Bottom Tabs Section: Subtasks | Comments [count] | Activities */}
-            <div className="pt-2 border-t border-primary-medium/10">
+            <div className="pt-6 border-t border-primary-medium/15">
               {/* Tab Navigation */}
-              <div className="flex items-center gap-6 border-b border-primary-medium/10 pb-2 select-none">
+              <div className="flex items-center gap-6 border-b border-primary-medium/15 pb-3 select-none">
                 {/* 1. Subtasks Tab */}
                 <button
                   type="button"
                   onClick={() => setActiveTab('subtasks')}
                   className={`relative pb-2 text-xs sm:text-sm font-bold transition-colors cursor-pointer ${
-                    activeTab === 'subtasks'
+                    effectiveTab === 'subtasks'
                       ? 'text-primary-dark'
                       : 'text-primary-medium/60 hover:text-primary-dark'
                   }`}
                 >
                   <span>{t('taskDetail.subtasks')}</span>
-                  {activeTab === 'subtasks' && (
+                  {effectiveTab === 'subtasks' && (
                     <motion.div
                       layoutId="detailTabIndicator"
                       className="absolute -bottom-[9px] left-0 right-0 h-0.5 bg-primary-dark rounded-full"
@@ -1010,42 +1212,44 @@ export function TaskDetailView({
                   )}
                 </button>
 
-                {/* 2. Comments Tab */}
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('comments')}
-                  className={`relative pb-2 text-xs sm:text-sm font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                    activeTab === 'comments'
-                      ? 'text-primary-dark'
-                      : 'text-primary-medium/60 hover:text-primary-dark'
-                  }`}
-                >
-                  <span>{t('taskDetail.comments')}</span>
-                  {commentsList.length > 0 && (
-                    <span className="w-4.5 h-4.5 rounded-full bg-primary-surface text-primary-dark text-[10px] font-extrabold flex items-center justify-center border border-primary-medium/20 shadow-2xs">
-                      {commentsList.length}
-                    </span>
-                  )}
-                  {activeTab === 'comments' && (
-                    <motion.div
-                      layoutId="detailTabIndicator"
-                      className="absolute -bottom-[9px] left-0 right-0 h-0.5 bg-primary-dark rounded-full"
-                    />
-                  )}
-                </button>
+                {/* 2. Comments Tab (Sidebar mode only; in Modal & Full Screen it is in the dedicated left column) */}
+                {!isTwoColumn && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('comments')}
+                    className={`relative pb-2 text-xs sm:text-sm font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                      effectiveTab === 'comments'
+                        ? 'text-primary-dark'
+                        : 'text-primary-medium/60 hover:text-primary-dark'
+                    }`}
+                  >
+                    <span>{t('taskDetail.comments')}</span>
+                    {commentsList.length > 0 && (
+                      <span className="w-4.5 h-4.5 rounded-full bg-primary-surface text-primary-dark text-[10px] font-extrabold flex items-center justify-center border border-primary-medium/20 shadow-2xs">
+                        {commentsList.length}
+                      </span>
+                    )}
+                    {effectiveTab === 'comments' && (
+                      <motion.div
+                        layoutId="detailTabIndicator"
+                        className="absolute -bottom-[9px] left-0 right-0 h-0.5 bg-primary-dark rounded-full"
+                      />
+                    )}
+                  </button>
+                )}
 
                 {/* 3. Activities Tab */}
                 <button
                   type="button"
                   onClick={() => setActiveTab('activities')}
                   className={`relative pb-2 text-xs sm:text-sm font-bold transition-colors cursor-pointer ${
-                    activeTab === 'activities'
+                    effectiveTab === 'activities'
                       ? 'text-primary-dark'
                       : 'text-primary-medium/60 hover:text-primary-dark'
                   }`}
                 >
                   <span>{t('taskDetail.activities')}</span>
-                  {activeTab === 'activities' && (
+                  {effectiveTab === 'activities' && (
                     <motion.div
                       layoutId="detailTabIndicator"
                       className="absolute -bottom-[9px] left-0 right-0 h-0.5 bg-primary-dark rounded-full"
@@ -1055,10 +1259,10 @@ export function TaskDetailView({
               </div>
 
               {/* Tab 1: Subtasks Content matching reference layout */}
-              {activeTab === 'subtasks' && (
-                <div className="py-4 space-y-3">
+              {effectiveTab === 'subtasks' && (
+                <div className="pt-5 space-y-4">
                   {/* Header: Design Process / Subtasks Title + Progress Fraction */}
-                  <div className="flex items-center justify-between text-xs font-bold text-primary-dark">
+                  <div className="flex items-center justify-between text-xs font-bold text-primary-dark pb-1 select-none">
                     <span>{t('taskDetail.designProcess')}</span>
                     <div className="flex items-center gap-1.5 text-primary-medium/80">
                       <span className="text-[11px] font-extrabold text-primary-dark">
@@ -1071,16 +1275,16 @@ export function TaskDetailView({
                   </div>
 
                   {/* Subtask Items List */}
-                  <div className="max-h-60 sm:max-h-72 overflow-y-auto custom-scrollbar space-y-2.5 pr-1 p-0.5">
+                  <div className="max-h-64 sm:max-h-80 overflow-y-auto custom-scrollbar space-y-3 pr-1 p-0.5">
                     {subtasksList.length === 0 ? (
-                      <div className="py-6 text-center text-xs text-primary-medium/60 border border-dashed border-primary-medium/20 rounded-xl">
+                      <div className="py-7 text-center text-xs text-primary-medium/60 border border-dashed border-primary-medium/20 rounded-2xl">
                         {t('taskDetail.noSubtasks')}
                       </div>
                     ) : (
                       subtasksList.map((subtask) => (
                         <div
                           key={subtask.id}
-                          className="bg-[#faf9f5] border border-primary-medium/15 rounded-xl p-3 space-y-2 transition-all group"
+                          className="bg-[#faf9f5] hover:bg-[#f7f5ef] border border-primary-medium/15 rounded-xl p-3 sm:p-3.5 space-y-2.5 transition-all group shadow-2xs"
                         >
                           <div className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -1135,52 +1339,54 @@ export function TaskDetailView({
                     )}
                   </div>
 
-                  {/* Add Subtask Row */}
-                  {isAddingSubtask ? (
-                    <div className="flex items-center gap-2 pt-1">
-                      <input
-                        type="text"
-                        value={newSubtaskTitle}
-                        onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleCreateSubtask();
-                          if (e.key === 'Escape') setIsAddingSubtask(false);
-                        }}
-                        autoFocus
-                        placeholder={t('modal.subtaskPlaceholder')}
-                        className="flex-1 text-xs sm:text-sm bg-[#faf9f5] border border-primary-medium/25 rounded-xl px-3 py-2 text-primary-dark placeholder:text-primary-medium/50 focus:outline-none focus:ring-2 focus:ring-primary-dark/20"
-                      />
+                  {/* Add Subtask Row with clean top spacing */}
+                  <div className="pt-2">
+                    {isAddingSubtask ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={newSubtaskTitle}
+                          onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleCreateSubtask();
+                            if (e.key === 'Escape') setIsAddingSubtask(false);
+                          }}
+                          autoFocus
+                          placeholder={t('modal.subtaskPlaceholder')}
+                          className="flex-1 text-xs sm:text-sm bg-[#faf9f5] border border-primary-medium/25 rounded-xl px-3.5 py-2.5 text-primary-dark placeholder:text-primary-medium/50 focus:outline-none focus:ring-2 focus:ring-primary-dark/20"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleCreateSubtask}
+                          className="px-4 py-2.5 rounded-xl bg-primary-dark text-white text-xs font-semibold hover:bg-primary cursor-pointer shadow-2xs shrink-0"
+                        >
+                          {t('modal.addTask')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsAddingSubtask(false)}
+                          className="p-2.5 rounded-xl text-primary-medium/60 hover:text-primary-dark hover:bg-primary-surface cursor-pointer shrink-0"
+                        >
+                          <LuX className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
                       <button
                         type="button"
-                        onClick={handleCreateSubtask}
-                        className="px-3.5 py-2 rounded-xl bg-primary-dark text-white text-xs font-semibold hover:bg-primary cursor-pointer shadow-2xs"
+                        onClick={() => setIsAddingSubtask(true)}
+                        className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl border border-dashed border-primary-medium/30 hover:border-primary-dark/50 bg-[#faf9f5] hover:bg-[#f3f1ec] text-xs sm:text-sm font-semibold text-primary-dark/85 hover:text-primary-dark transition-all cursor-pointer shadow-2xs group"
                       >
-                        {t('modal.addTask')}
+                        <LuGitBranchPlus className="w-4 h-4 text-primary-medium/70 group-hover:text-primary-dark transition-colors shrink-0" />
+                        <span>{t('taskDetail.addSubtask')}</span>
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setIsAddingSubtask(false)}
-                        className="p-2 rounded-xl text-primary-medium/60 hover:text-primary-dark hover:bg-primary-surface cursor-pointer"
-                      >
-                        <LuX className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setIsAddingSubtask(true)}
-                      className="w-full flex items-center justify-center gap-2.5 py-2.5 rounded-xl border border-dashed border-primary-medium/25 hover:border-primary-dark/40 bg-[#faf9f5] hover:bg-[#f3f1ec] text-xs font-semibold text-primary-dark/80 transition-all cursor-pointer shadow-2xs group"
-                    >
-                      <LuGitBranchPlus className="w-4 h-4 text-primary-medium/70 group-hover:text-primary-dark transition-colors shrink-0" />
-                      <span>{t('taskDetail.addSubtask')}</span>
-                    </button>
-                  )}
+                    )}
+                  </div>
                 </div>
               )}
 
-              {/* Tab 2: Comments Content */}
-              {activeTab === 'comments' && (
-                <div className="py-4 space-y-4">
+              {/* Tab 2: Comments Content (Only in single-column Sidebar mode) */}
+              {!isTwoColumn && effectiveTab === 'comments' && (
+                <div className="pt-5 space-y-4">
                   {commentsList.length === 0 ? (
                     <div className="py-8 text-center text-xs text-primary-medium/60 border border-dashed border-primary-medium/20 rounded-xl">
                       <LuMessageSquare className="w-6 h-6 mx-auto mb-2 text-primary-medium/40" />
@@ -1251,8 +1457,8 @@ export function TaskDetailView({
               )}
 
               {/* Tab 3: Activities Content */}
-              {activeTab === 'activities' && (
-                <div className="py-4 space-y-3">
+              {effectiveTab === 'activities' && (
+                <div className="pt-5 space-y-3.5">
                   <div className="flex items-start gap-3 bg-[#faf9f5] border border-primary-medium/15 rounded-xl p-3 text-xs">
                     <div className="w-6 h-6 rounded-full bg-primary-surface text-primary-dark flex items-center justify-center shrink-0">
                       <LuActivity className="w-3.5 h-3.5" />
@@ -1286,7 +1492,8 @@ export function TaskDetailView({
               )}
             </div>
           </div>
-        </motion.div>
+        </div>
+      </motion.div>
       )}
     </AnimatePresence>
 
