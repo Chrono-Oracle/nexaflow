@@ -203,6 +203,49 @@ function AssigneeAvatar({
   );
 }
 
+function LivelyBounceIcon({
+  Icon,
+  className = '',
+  sizeClass = 'w-5 h-5',
+}: {
+  Icon: React.ComponentType<{ className?: string }>;
+  className?: string;
+  sizeClass?: string;
+}) {
+  return (
+    <motion.div
+      animate={{
+        y: [0, -10, 0],
+        scaleX: [1, 0.92, 1.08, 1],
+        scaleY: [1, 1.15, 0.9, 1],
+        rotate: [0, -4, 4, 0],
+      }}
+      transition={{
+        duration: 1.15,
+        repeat: Infinity,
+        repeatType: 'loop',
+        ease: [0.34, 1.3, 0.64, 1],
+      }}
+      className="relative flex items-center justify-center shrink-0"
+    >
+      {/* Soft lively glow behind the icon */}
+      <motion.div
+        animate={{
+          scale: [0.9, 1.35, 0.9],
+          opacity: [0.2, 0.55, 0.2],
+        }}
+        transition={{
+          duration: 1.15,
+          repeat: Infinity,
+          ease: 'easeInOut',
+        }}
+        className="absolute inset-0 rounded-full blur-xs bg-current opacity-30 pointer-events-none"
+      />
+      <Icon className={`relative z-10 ${sizeClass} ${className}`} />
+    </motion.div>
+  );
+}
+
 export function TaskListView({
   tasks,
   projects,
@@ -845,11 +888,24 @@ export function TaskListView({
                   {/* Task Items List */}
                   <div className="divide-y divide-primary-medium/10 pt-1">
                     {groupTasks.length === 0 ? (
-                      <div className="py-7 text-center text-xs text-primary-medium/60 border border-dashed border-primary-medium/20 rounded-xl my-2">
-                        {t('columnActions.emptyColumn', {
-                          title: t(STATUS_KEY_MAP[group.id]),
-                        })}
-                      </div>
+                      isGroupDragTarget ? (
+                        <div className="py-7 border-2 border-dashed border-primary-dark/50 bg-primary-surface/75 rounded-2xl flex items-center justify-center gap-3 my-2 text-xs font-bold text-primary-dark shadow-2xs">
+                          <LivelyBounceIcon
+                            Icon={group.Icon}
+                            className={group.iconClass}
+                            sizeClass="w-5 h-5"
+                          />
+                          <span className="tracking-tight">
+                            {t('columnActions.dropTaskHere')}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="py-7 text-center text-xs text-primary-medium/60 border border-dashed border-primary-medium/20 rounded-xl my-2">
+                          {t('columnActions.emptyColumn', {
+                            title: t(STATUS_KEY_MAP[group.id]),
+                          })}
+                        </div>
+                      )
                     ) : (
                       groupTasks.map((task) => {
                         const isCompleted = task.status === 'Completed';
@@ -1103,6 +1159,18 @@ export function TaskListView({
                           </motion.div>
                         );
                       })
+                    )}
+                    {isGroupDragTarget && groupTasks.length > 0 && (
+                      <div className="py-3 border-2 border-dashed border-primary-dark/50 bg-primary-surface/75 rounded-xl flex items-center justify-center gap-2.5 my-2 text-xs font-bold text-primary-dark shadow-2xs">
+                        <LivelyBounceIcon
+                          Icon={group.Icon}
+                          className={group.iconClass}
+                          sizeClass="w-4 h-4"
+                        />
+                        <span className="tracking-tight">
+                          {t('columnActions.dropTaskHere')}
+                        </span>
+                      </div>
                     )}
                   </div>
                 </motion.div>

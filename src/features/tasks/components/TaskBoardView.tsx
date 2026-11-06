@@ -134,6 +134,49 @@ function cleanDescription(htmlOrText?: string): string {
   return htmlOrText.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
 }
 
+function LivelyBounceIcon({
+  Icon,
+  className = '',
+  sizeClass = 'w-5 h-5',
+}: {
+  Icon: React.ComponentType<{ className?: string }>;
+  className?: string;
+  sizeClass?: string;
+}) {
+  return (
+    <motion.div
+      animate={{
+        y: [0, -10, 0],
+        scaleX: [1, 0.92, 1.08, 1],
+        scaleY: [1, 1.15, 0.9, 1],
+        rotate: [0, -4, 4, 0],
+      }}
+      transition={{
+        duration: 1.15,
+        repeat: Infinity,
+        repeatType: 'loop',
+        ease: [0.34, 1.3, 0.64, 1],
+      }}
+      className="relative flex items-center justify-center shrink-0"
+    >
+      {/* Soft lively glow behind the icon */}
+      <motion.div
+        animate={{
+          scale: [0.9, 1.35, 0.9],
+          opacity: [0.2, 0.55, 0.2],
+        }}
+        transition={{
+          duration: 1.15,
+          repeat: Infinity,
+          ease: 'easeInOut',
+        }}
+        className="absolute inset-0 rounded-full blur-xs bg-current opacity-30 pointer-events-none"
+      />
+      <Icon className={`relative z-10 ${sizeClass} ${className}`} />
+    </motion.div>
+  );
+}
+
 export function TaskBoardView({
   tasks,
   projects,
@@ -580,10 +623,15 @@ export function TaskBoardView({
                     layout
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="h-44 border-2 border-dashed border-primary-dark/60 bg-primary-surface/70 rounded-xl flex flex-col items-center justify-center p-4 text-center text-xs font-bold text-primary-dark shadow-xs"
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="h-44 border-2 border-dashed border-primary-dark/60 bg-primary-surface/75 rounded-2xl flex flex-col items-center justify-center p-4 text-center text-xs font-bold text-primary-dark shadow-xs gap-2"
                   >
-                    <col.Icon className={`w-6 h-6 mb-2 animate-bounce ${col.iconClass}`} />
-                    <span>{t('columnActions.dropTaskHere')}</span>
+                    <LivelyBounceIcon
+                      Icon={col.Icon}
+                      className={col.iconClass}
+                      sizeClass="w-7 h-7"
+                    />
+                    <span className="tracking-tight">{t('columnActions.dropTaskHere')}</span>
                   </motion.div>
                 ) : (
                   <div className="h-44 border-2 border-dashed border-primary-medium/15 rounded-xl flex flex-col items-center justify-center p-4 text-center">
@@ -770,10 +818,14 @@ export function TaskBoardView({
                         animate={{ opacity: 1, scale: 1, height: 72 }}
                         exit={{ opacity: 0, scale: 0.95, height: 0 }}
                         transition={{ type: 'spring', stiffness: 450, damping: 30 }}
-                        className="rounded-xl border-2 border-dashed border-primary-dark/50 bg-primary-surface/60 flex items-center justify-center text-xs font-bold text-primary-dark gap-2 shadow-2xs"
+                        className="rounded-2xl border-2 border-dashed border-primary-dark/50 bg-primary-surface/75 flex items-center justify-center text-xs font-bold text-primary-dark gap-2.5 shadow-2xs overflow-hidden"
                       >
-                        <col.Icon className={`w-4 h-4 animate-bounce ${col.iconClass}`} />
-                        <span>{t('columnActions.dropTaskHere')}</span>
+                        <LivelyBounceIcon
+                          Icon={col.Icon}
+                          className={col.iconClass}
+                          sizeClass="w-5 h-5"
+                        />
+                        <span className="tracking-tight">{t('columnActions.dropTaskHere')}</span>
                       </motion.div>
                     )}
                   </AnimatePresence>
