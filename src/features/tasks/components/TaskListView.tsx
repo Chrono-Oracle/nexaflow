@@ -32,6 +32,7 @@ import { Task, TaskStatus } from '@/features/tasks/types/task.types';
 import { Project } from '@/features/projects/types/project.types';
 import { getAuthUsers } from '@/data/users';
 import { getTaskStatusStyle } from '@/features/projects/utils/badgeStyles';
+import { stripHtmlToPlainText } from '@/features/projects/utils/htmlSanitizer';
 import {
   useBatchDeleteTasksMutation,
   useBatchUpdateTaskStatusMutation,
@@ -310,7 +311,7 @@ export function TaskListView({
     return tasks.filter(
       (t) =>
         t.title.toLowerCase().includes(q) ||
-        (t.description && t.description.toLowerCase().includes(q))
+        (t.description && stripHtmlToPlainText(t.description).toLowerCase().includes(q))
     );
   }, [tasks, searchQuery]);
 
@@ -1045,7 +1046,7 @@ export function TaskListView({
                                   {task.description && (
                                     <LuFileText
                                       className="w-3.5 h-3.5 text-primary-medium/55 shrink-0"
-                                      title={task.description}
+                                      title={stripHtmlToPlainText(task.description)}
                                     />
                                   )}
 

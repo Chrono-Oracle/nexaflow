@@ -8,6 +8,7 @@ import {
   getProjectStatusStyle,
   getProjectPriorityStyle,
 } from '../utils/badgeStyles';
+import { stripHtmlToPlainText } from '../utils/htmlSanitizer';
 
 interface ProjectCardProps {
   project: Project;
@@ -81,7 +82,7 @@ export function ProjectCard({ project, onClick }: ProjectCardProps) {
             {project.name}
           </h2>
           <p className="text-xs text-primary-medium/75 mt-1 line-clamp-2 leading-relaxed">
-            {project.description || 'No description provided.'}
+            {stripHtmlToPlainText(project.description) || 'No description provided.'}
           </p>
         </div>
       </div>

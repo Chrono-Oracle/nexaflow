@@ -9,6 +9,7 @@ import {
   getProjectStatusStyle,
   getProjectPriorityStyle,
 } from '@/features/projects/utils/badgeStyles';
+import { stripHtmlToPlainText } from '@/features/projects/utils/htmlSanitizer';
 import { ProjectsEmptyState } from './ProjectsEmptyState';
 import { ProjectDetailModal } from '@/features/projects/components/ProjectDetailModal';
 
@@ -111,7 +112,7 @@ export function ProjectsOverviewWidget() {
                         {project.name}
                       </div>
                       <div className="text-xs text-primary-medium/65 mt-0.5 font-normal truncate max-w-50">
-                        {project.description || project.manager?.name || 'Project'}
+                        {stripHtmlToPlainText(project.description) || project.manager?.name || 'Project'}
                       </div>
                     </td>
 

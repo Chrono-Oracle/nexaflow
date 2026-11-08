@@ -28,6 +28,7 @@ import { Task, TaskStatus } from '@/features/tasks/types/task.types';
 import { Project } from '@/features/projects/types/project.types';
 import { getAuthUsers } from '@/data/users';
 import { getProjectPriorityStyle } from '@/features/projects/utils/badgeStyles';
+import { stripHtmlToPlainText } from '@/features/projects/utils/htmlSanitizer';
 import {
   useBatchDeleteTasksMutation,
   useBatchUpdateTaskStatusMutation,
@@ -131,8 +132,7 @@ function formatCardDate(
 }
 
 function cleanDescription(htmlOrText?: string): string {
-  if (!htmlOrText) return '';
-  return htmlOrText.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+  return stripHtmlToPlainText(htmlOrText);
 }
 
 function LivelyBounceIcon({
@@ -308,7 +308,7 @@ export function TaskBoardView({
     return tasks.filter(
       (t) =>
         t.title.toLowerCase().includes(q) ||
-        (t.description && t.description.toLowerCase().includes(q))
+        (t.description && stripHtmlToPlainText(t.description).toLowerCase().includes(q))
     );
   }, [tasks, searchQuery]);
 

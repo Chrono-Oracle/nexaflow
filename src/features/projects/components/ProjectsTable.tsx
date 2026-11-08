@@ -7,6 +7,7 @@ import {
   getProjectStatusStyle,
   getProjectPriorityStyle,
 } from '../utils/badgeStyles';
+import { stripHtmlToPlainText } from '../utils/htmlSanitizer';
 import { ProjectsEmptyState } from '@/features/home/components/ProjectsEmptyState';
 
 interface ProjectsTableProps {
@@ -115,7 +116,7 @@ export function ProjectsTable({
                         {project.name}
                       </div>
                       <div className="text-xs text-primary-medium/65 mt-0.5 font-normal truncate max-w-56">
-                        {project.description || project.manager?.name || 'Project'}
+                        {stripHtmlToPlainText(project.description) || project.manager?.name || 'Project'}
                       </div>
                     </td>
 

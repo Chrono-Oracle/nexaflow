@@ -7,6 +7,7 @@ import { ProjectsTable } from '@/features/projects/components/ProjectsTable';
 import { CreateProjectModal } from '@/features/projects/components/CreateProjectModal';
 import { ProjectDetailModal } from '@/features/projects/components/ProjectDetailModal';
 import { ProjectStatus, ProjectPriority } from '@/features/projects/types/project.types';
+import { stripHtmlToPlainText } from '@/features/projects/utils/htmlSanitizer';
 
 export default function ProjectsPage() {
   const { data: projects = [] } = useProjectsQuery();
@@ -30,7 +31,9 @@ export default function ProjectsPage() {
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
         const matchesName = project.name.toLowerCase().includes(query);
-        const matchesDesc = project.description?.toLowerCase().includes(query);
+        const matchesDesc = stripHtmlToPlainText(project.description)
+          .toLowerCase()
+          .includes(query);
         const matchesManager = project.manager?.name.toLowerCase().includes(query);
         const matchesTag = project.tags?.some((tag) => tag.toLowerCase().includes(query));
 
