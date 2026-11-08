@@ -193,6 +193,9 @@
       "selectDueDate": "Sélectionner la date d'échéance",
       "assignTo": "Assigner à",
       "priority": "Priorité",
+      "project": "Projet",
+      "selectProject": "Sélectionner un projet",
+      "noProject": "Aucun projet (Général)",
       "subtasks": "Sous-tâches ({count})",
       "addSubtask": "Ajouter une sous-tâche",
       "subtaskPlaceholder": "Saisir le titre de la sous-tâche...",
@@ -426,6 +429,16 @@
       "deleteProject": "Supprimer le projet",
       "markCompleted": "Marquer comme terminé",
       "close": "Fermer"
+    }
+  },
+  "teamPage": {
+    "title": "Annuaire de l'équipe",
+    "subtitle": "Aperçu des membres de l'équipe, des rôles et des capacités de charge de travail.",
+    "createTeam": "Créer une équipe",
+    "emptyState": {
+      "title": "Aucune équipe créée pour l'instant",
+      "description": "Commencez à bâtir votre équipe pour collaborer sur des projets, attribuer des tâches et suivre la charge de travail.",
+      "createTeam": "Créer une équipe"
     }
   }
 }

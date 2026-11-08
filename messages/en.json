@@ -193,6 +193,9 @@
       "selectDueDate": "Select due date",
       "assignTo": "Assign to",
       "priority": "Priority",
+      "project": "Project",
+      "selectProject": "Select project",
+      "noProject": "No project (General)",
       "subtasks": "Subtasks ({count})",
       "addSubtask": "Add subtask",
       "subtaskPlaceholder": "Enter subtask title...",
@@ -426,6 +429,16 @@
       "deleteProject": "Delete Project",
       "markCompleted": "Mark as Completed",
       "close": "Close"
+    }
+  },
+  "teamPage": {
+    "title": "Team Directory",
+    "subtitle": "Overview of team members, roles and workload capacities.",
+    "createTeam": "Create Team",
+    "emptyState": {
+      "title": "No teams created yet",
+      "description": "Start building your team to collaborate on projects, assign tasks, and track workload capacity across your workspace.",
+      "createTeam": "Create Team"
     }
   }
 }

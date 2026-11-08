@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, useSyncExternalStore } from 'react';
+import { useTranslations } from 'next-intl';
 import { createPortal } from 'react-dom';
 import { LuFolderKanban, LuChevronDown, LuCheck, LuSearch, LuX } from 'react-icons/lu';
 import { Project } from '@/features/projects/types/project.types';
@@ -20,6 +21,7 @@ export function ProjectSelector({
   onChange,
   disabled = false,
 }: ProjectSelectorProps) {
+  const t = useTranslations('tasksPage.modal');
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -126,7 +128,7 @@ export function ProjectSelector({
               selectedProject ? 'text-primary-dark font-semibold' : 'text-primary-medium/60'
             }`}
           >
-            {selectedProject ? selectedProject.name : 'Select project'}
+            {selectedProject ? selectedProject.name : t('selectProject')}
           </span>
         </div>
 
@@ -192,7 +194,7 @@ export function ProjectSelector({
                     : 'text-primary-medium/70 hover:bg-primary-surface/30 hover:text-primary-dark'
                 }`}
               >
-                <span className="italic">No project (General)</span>
+                <span className="italic">{t('noProject')}</span>
                 {!value && <LuCheck className="w-3.5 h-3.5 text-primary-dark shrink-0" />}
               </button>
 

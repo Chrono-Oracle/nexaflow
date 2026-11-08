@@ -568,7 +568,7 @@ export function AddTaskModal({
             {/* Project Selection Row */}
             <div>
               <label className="text-xs sm:text-sm font-semibold text-primary-dark mb-1.5 block">
-                {t('modal.project') || 'Project'}
+                {t('modal.project')}
               </label>
               <ProjectSelector
                 projects={projects}
