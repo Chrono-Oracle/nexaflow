@@ -159,7 +159,38 @@ function getActiveFormatsFromSelection(editor: HTMLElement | null): ActiveFormat
 }
 
 /**
- * Modern DOM transformation for format blocks (h1, h2, h3, p, blockquote).
+ * Finds the direct child node of editor containing the selection/cursor node.
+ */
+function getDirectChildOfEditor(editor: HTMLElement, node: Node | null): Node | null {
+  let current: Node | null = node;
+  while (current && current.parentNode !== editor) {
+    current = current.parentNode;
+  }
+  return current;
+}
+
+/**
+ * Returns the nearest block-level HTMLElement containing the selection inside editor.
+ */
+function getActiveBlockElement(editor: HTMLElement): HTMLElement | null {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return null;
+  let current: Node | null = sel.anchorNode;
+  while (current && current !== editor && editor.contains(current)) {
+    if (current instanceof HTMLElement) {
+      const tag = current.tagName.toLowerCase();
+      if (['p', 'h1', 'h2', 'h3', 'div', 'li', 'blockquote'].includes(tag)) {
+        return current;
+      }
+    }
+    current = current.parentNode;
+  }
+  return null;
+}
+
+/**
+ * Formats only the active line/block to h1, h2, h3, or p.
+ * Never mutates sibling blocks or global editor content.
  */
 function applyBlockFormat(editor: HTMLElement, targetTag: string) {
   const sel = window.getSelection();
@@ -172,14 +203,33 @@ function applyBlockFormat(editor: HTMLElement, targetTag: string) {
     return;
   }
 
-  // Find the closest block container inside editor
-  let current: Node | null = sel.anchorNode;
+  // 1. Check if the block is already formatted with cleanTag to toggle back to 'p'
+  const currentBlock = getActiveBlockElement(editor);
+  const isAlreadyThisTag = currentBlock && currentBlock.tagName.toLowerCase() === cleanTag;
+  const effectiveTag = isAlreadyThisTag ? 'p' : cleanTag;
+
+  // 2. Primary: Native browser formatBlock command
+  // Safely operates ONLY on the active block / line at the cursor
+  let success = false;
+  try {
+    success = runBrowserCommand('formatBlock', `<${effectiveTag}>`);
+    if (!success) {
+      success = runBrowserCommand('formatBlock', effectiveTag);
+    }
+  } catch {}
+
+  if (success) {
+    return;
+  }
+
+  // 3. Localized DOM Fallback: strictly touches only the active block / direct child
   let targetBlock: HTMLElement | null = null;
+  let current: Node | null = sel.anchorNode;
 
   while (current && current !== editor && editor.contains(current)) {
     if (current instanceof HTMLElement) {
       const tag = current.tagName.toLowerCase();
-      if (['p', 'h1', 'h2', 'h3', 'div'].includes(tag)) {
+      if (['p', 'h1', 'h2', 'h3', 'div', 'li'].includes(tag)) {
         targetBlock = current;
         break;
       }
@@ -187,18 +237,21 @@ function applyBlockFormat(editor: HTMLElement, targetTag: string) {
     current = current.parentNode;
   }
 
-  if (targetBlock) {
-    if (targetBlock.tagName.toLowerCase() === cleanTag) {
-      // Toggle back to paragraph if selecting the same header
-      const p = document.createElement('p');
-      p.innerHTML = targetBlock.innerHTML || '<br>';
-      if (targetBlock.style.textAlign) {
-        p.style.textAlign = targetBlock.style.textAlign;
+  if (targetBlock && targetBlock !== editor) {
+    if (targetBlock.tagName.toLowerCase() === 'li') {
+      const list = targetBlock.closest('ul, ol');
+      const newBlock = document.createElement(effectiveTag);
+      newBlock.innerHTML = targetBlock.innerHTML || '<br>';
+      if (list && list.parentNode) {
+        list.parentNode.insertBefore(newBlock, list.nextSibling);
+        targetBlock.remove();
+        if (!list.firstElementChild) {
+          list.remove();
+        }
       }
-      targetBlock.parentNode?.replaceChild(p, targetBlock);
-      setCaretAtEnd(p);
+      setCaretAtEnd(newBlock);
     } else {
-      const newBlock = document.createElement(cleanTag);
+      const newBlock = document.createElement(effectiveTag);
       newBlock.innerHTML = targetBlock.innerHTML || '<br>';
       if (targetBlock.style.textAlign) {
         newBlock.style.textAlign = targetBlock.style.textAlign;
@@ -207,11 +260,21 @@ function applyBlockFormat(editor: HTMLElement, targetTag: string) {
       setCaretAtEnd(newBlock);
     }
   } else {
-    // If text was directly in editor root
-    const newBlock = document.createElement(cleanTag);
-    newBlock.innerHTML = editor.innerHTML || '<br>';
-    editor.innerHTML = '';
-    editor.appendChild(newBlock);
+    // Selection is directly on a root child of editor
+    const directChild = getDirectChildOfEditor(editor, sel.anchorNode);
+    const newBlock = document.createElement(effectiveTag);
+
+    if (directChild && directChild !== editor && editor.contains(directChild)) {
+      if (directChild.nodeType === Node.TEXT_NODE) {
+        newBlock.textContent = directChild.textContent || '';
+      } else if (directChild instanceof HTMLElement) {
+        newBlock.innerHTML = directChild.innerHTML || '<br>';
+      }
+      editor.replaceChild(newBlock, directChild);
+    } else {
+      newBlock.innerHTML = '<br>';
+      editor.appendChild(newBlock);
+    }
     setCaretAtEnd(newBlock);
   }
 }
@@ -222,6 +285,9 @@ function applyBlockFormat(editor: HTMLElement, targetTag: string) {
 function applyAlignment(editor: HTMLElement, alignment: 'left' | 'center' | 'right') {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0) return;
+
+  const cmd = alignment === 'center' ? 'justifyCenter' : alignment === 'right' ? 'justifyRight' : 'justifyLeft';
+  runBrowserCommand(cmd);
 
   let current: Node | null = sel.anchorNode;
   let block: HTMLElement | null = null;
@@ -239,13 +305,19 @@ function applyAlignment(editor: HTMLElement, alignment: 'left' | 'center' | 'rig
 
   if (block) {
     block.style.textAlign = alignment;
-  } else if (editor) {
-    const p = document.createElement('p');
-    p.style.textAlign = alignment;
-    p.innerHTML = editor.innerHTML || '<br>';
-    editor.innerHTML = '';
-    editor.appendChild(p);
-    setCaretAtEnd(p);
+  } else {
+    const directChild = getDirectChildOfEditor(editor, sel.anchorNode);
+    if (directChild && directChild !== editor && editor.contains(directChild)) {
+      const p = document.createElement('p');
+      p.style.textAlign = alignment;
+      if (directChild.nodeType === Node.TEXT_NODE) {
+        p.textContent = directChild.textContent || '';
+      } else if (directChild instanceof HTMLElement) {
+        p.innerHTML = directChild.innerHTML || '<br>';
+      }
+      editor.replaceChild(p, directChild);
+      setCaretAtEnd(p);
+    }
   }
 }
 
@@ -285,10 +357,21 @@ function toggleBlockquote(editor: HTMLElement) {
     bq.appendChild(block);
     setCaretAtEnd(block);
   } else {
+    const directChild = getDirectChildOfEditor(editor, sel.anchorNode);
     const bq = document.createElement('blockquote');
-    bq.innerHTML = `<p>${editor.innerHTML || '<br>'}</p>`;
-    editor.innerHTML = '';
-    editor.appendChild(bq);
+    if (directChild && directChild !== editor && editor.contains(directChild)) {
+      const p = document.createElement('p');
+      if (directChild.nodeType === Node.TEXT_NODE) {
+        p.textContent = directChild.textContent || '';
+      } else if (directChild instanceof HTMLElement) {
+        p.innerHTML = directChild.innerHTML || '<br>';
+      }
+      bq.appendChild(p);
+      editor.replaceChild(bq, directChild);
+    } else {
+      bq.innerHTML = '<p><br></p>';
+      editor.appendChild(bq);
+    }
     setCaretAtEnd(bq);
   }
 }
@@ -347,12 +430,22 @@ function toggleList(editor: HTMLElement, listType: 'ul' | 'ol') {
     block.parentNode?.replaceChild(list, block);
     setCaretAtEnd(newLi);
   } else {
+    const directChild = getDirectChildOfEditor(editor, sel.anchorNode);
     const list = document.createElement(listType);
     const newLi = document.createElement('li');
-    newLi.innerHTML = editor.innerHTML || '<br>';
-    list.appendChild(newLi);
-    editor.innerHTML = '';
-    editor.appendChild(list);
+    if (directChild && directChild !== editor && editor.contains(directChild)) {
+      if (directChild.nodeType === Node.TEXT_NODE) {
+        newLi.textContent = directChild.textContent || '';
+      } else if (directChild instanceof HTMLElement) {
+        newLi.innerHTML = directChild.innerHTML || '<br>';
+      }
+      list.appendChild(newLi);
+      editor.replaceChild(list, directChild);
+    } else {
+      newLi.innerHTML = '<br>';
+      list.appendChild(newLi);
+      editor.appendChild(list);
+    }
     setCaretAtEnd(newLi);
   }
 }
