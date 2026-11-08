@@ -29,12 +29,12 @@ export function WelcomeBanner({ onCreateProject }: WelcomeBannerProps) {
         </p>
       </div>
 
-      {/* Right: + Create Project CTA Button only (Hidden on mobile screens, rounded-md on big screens) */}
-      <div className="shrink-0 hidden md:block">
+      {/* Right: + Create Project CTA Button */}
+      <div className="shrink-0">
         <button
           type="button"
           onClick={onCreateProject}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-md bg-primary-dark text-white text-sm font-medium shadow-md hover:bg-primary transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+          className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-md bg-primary-dark text-white text-xs sm:text-sm font-medium shadow-md hover:bg-primary transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
         >
           <LuPlus className="w-4 h-4 stroke-[2.5]" aria-hidden="true" />
           <span>{t('createProject')}</span>

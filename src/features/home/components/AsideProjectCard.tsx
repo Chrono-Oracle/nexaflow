@@ -22,7 +22,11 @@ import { stripHtmlToPlainText } from '@/features/projects/utils/htmlSanitizer';
 import { ProjectDetailModal } from '@/features/projects/components/ProjectDetailModal';
 import { getAuthUsers } from '@/data/users';
 
-export function AsideProjectCard() {
+interface AsideProjectCardProps {
+  onCreateProject?: () => void;
+}
+
+export function AsideProjectCard({ onCreateProject }: AsideProjectCardProps) {
   const t = useTranslations('asideProjects');
   const tBadges = useTranslations('projectOverview');
   const locale = useLocale();
@@ -361,13 +365,24 @@ export function AsideProjectCard() {
               Create your first project to start tracking deadlines, milestones, and task progress here.
             </p>
           </div>
-          <Link
-            href="/projects"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary-dark text-white text-xs font-semibold hover:bg-primary transition-colors cursor-pointer shadow-xs"
-          >
-            <LuPlus className="w-3.5 h-3.5" />
-            <span>Create Project</span>
-          </Link>
+          {onCreateProject ? (
+            <button
+              type="button"
+              onClick={onCreateProject}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary-dark text-white text-xs font-semibold hover:bg-primary transition-colors cursor-pointer shadow-xs"
+            >
+              <LuPlus className="w-3.5 h-3.5" />
+              <span>Create Project</span>
+            </button>
+          ) : (
+            <Link
+              href="/projects"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary-dark text-white text-xs font-semibold hover:bg-primary transition-colors cursor-pointer shadow-xs"
+            >
+              <LuPlus className="w-3.5 h-3.5" />
+              <span>Create Project</span>
+            </Link>
+          )}
         </div>
       ) : (
         // Live Project Spotlight Card

@@ -13,8 +13,13 @@ import { stripHtmlToPlainText } from '@/features/projects/utils/htmlSanitizer';
 import { ProjectsEmptyState } from './ProjectsEmptyState';
 import { ProjectDetailModal } from '@/features/projects/components/ProjectDetailModal';
 
-export function ProjectsOverviewWidget() {
+interface ProjectsOverviewWidgetProps {
+  onCreateProject?: () => void;
+}
+
+export function ProjectsOverviewWidget({ onCreateProject }: ProjectsOverviewWidgetProps) {
   const t = useTranslations('projectOverview');
+  const tPages = useTranslations('pages');
   const locale = useLocale();
 
   // Read live projects from local storage state
@@ -68,6 +73,8 @@ export function ProjectsOverviewWidget() {
         <ProjectsEmptyState
           title={t('emptyTitle')}
           description={t('emptyDesc')}
+          onAction={onCreateProject}
+          actionLabel={tPages('createProject')}
         />
       ) : (
         /* Projects Table when populated with projects */

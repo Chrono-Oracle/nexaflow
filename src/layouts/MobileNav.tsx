@@ -17,6 +17,7 @@ import {
   LuPlus,
 } from 'react-icons/lu';
 import { TbGridDots } from 'react-icons/tb';
+import { CreateProjectModal } from '@/features/projects/components/CreateProjectModal';
 
 export function MobileNav() {
   const t = useTranslations('navigation');
@@ -24,6 +25,7 @@ export function MobileNav() {
   const router = useRouter();
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const navContainerRef = useRef<HTMLDivElement>(null);
 
   // Toggle between English and French
@@ -360,6 +362,7 @@ export function MobileNav() {
         {/* Separate Floating Circular Plus Action Button to Add Projects */}
         <button
           type="button"
+          onClick={() => setIsCreateModalOpen(true)}
           aria-label={t('createProject')}
           title={t('createProject')}
           className="relative z-20 w-12 h-12 shrink-0 rounded-full bg-primary-dark text-white shadow-xl flex items-center justify-center hover:bg-primary active:scale-95 transition-all focus:outline-none cursor-pointer"
@@ -367,6 +370,12 @@ export function MobileNav() {
           <LuPlus className="w-6 h-6 stroke-[2.5]" />
         </button>
       </nav>
+
+      {/* Create Project Modal Integration */}
+      <CreateProjectModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+      />
     </div>
   );
 }
