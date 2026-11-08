@@ -42,6 +42,10 @@ import { useUpdateProjectMutation, useDeleteProjectMutation } from '@/hooks/useD
 import { FileIconBadge, FileUploadModal } from '@/components/ui/FileUpload';
 import { TaskAttachment } from '@/components/ui/FileUpload/fileUpload.types';
 import { cleanTrailingEmptyHtml } from '../utils/htmlSanitizer';
+import {
+  getValidActivityDate,
+  formatRealTimeRelative,
+} from '../utils/activityTime';
 
 interface ProjectDetailModalProps {
   project: Project | null;
@@ -216,6 +220,17 @@ export function ProjectDetailModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, isStatusMenuOpen, isPriorityMenuOpen, isMoreMenuOpen, onClose]);
 
+  // Real-time ticker for activity timestamps (ticks every 5 seconds)
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isOpen]);
+
   // Focus add subtask input when toggled open
   useEffect(() => {
     if (isAddingSubtask && addSubtaskInputRef.current) {
@@ -248,7 +263,7 @@ export function ProjectDetailModal({
           actorAvatar: project.manager?.avatar || currentUser.avatar,
           action: 'created project',
           target: project.name,
-          timestamp: formatDetailDate(project.createdAt || project.startDate, locale),
+          timestamp: project.createdAt || project.startDate || new Date().toISOString(),
           badge: {
             type: 'create',
           },
@@ -256,7 +271,7 @@ export function ProjectDetailModal({
       ];
     }
     return [];
-  }, [project, currentUser.fullName, currentUser.avatar, locale]);
+  }, [project, currentUser.fullName, currentUser.avatar]);
 
   // Assigned members list directly from saved project data
   const assignedMembers: ProjectAssignedMember[] = useMemo(() => {
@@ -304,8 +319,9 @@ export function ProjectDetailModal({
       id: generateId('act'),
       actorName: currentUser.fullName,
       actorAvatar: currentUser.avatar,
-      action: toggledItem?.completed ? 'completed subtask' : 'uncompleted subtask',
-      timestamp: 'Just now',
+      action: toggledItem?.completed ? 'completed subtask' : 'reopened subtask',
+      target: toggledItem?.title,
+      timestamp: new Date().toISOString(),
       badge: {
         type: 'check',
         label: toggledItem?.title,
@@ -322,19 +338,34 @@ export function ProjectDetailModal({
   // Add new subtask
   const handleAddSubtask = () => {
     if (!newSubtaskTitle.trim()) return;
+    const title = newSubtaskTitle.trim();
     const newItem: ProjectSubtask = {
       id: generateId('sub'),
-      title: newSubtaskTitle.trim(),
+      title,
       completed: false,
     };
     const nextSubtasks = [...subtasks, newItem];
     const newCompletedCount = nextSubtasks.filter((s) => s.completed).length;
     const newProgress = Math.round((newCompletedCount / nextSubtasks.length) * 100);
 
+    const newActivity: ProjectActivity = {
+      id: generateId('act'),
+      actorName: currentUser.fullName,
+      actorAvatar: currentUser.avatar,
+      action: 'added subtask',
+      target: title,
+      timestamp: new Date().toISOString(),
+      badge: {
+        type: 'check',
+        label: title,
+      },
+    };
+
     handleUpdate({
       subtasks: nextSubtasks,
       progress: newProgress,
       taskCount: nextSubtasks.length,
+      activities: [newActivity, ...activities],
     });
     setNewSubtaskTitle('');
     setIsAddingSubtask(false);
@@ -392,7 +423,17 @@ export function ProjectDetailModal({
       createdAt: new Date().toISOString(),
     };
     const nextComments = [...(project.comments || []), newComment];
-    handleUpdate({ comments: nextComments });
+    const newActivity: ProjectActivity = {
+      id: generateId('act'),
+      actorName: currentUser.fullName,
+      actorAvatar: currentUser.avatar,
+      action: 'commented on project',
+      timestamp: new Date().toISOString(),
+    };
+    handleUpdate({
+      comments: nextComments,
+      activities: [newActivity, ...activities],
+    });
     setCommentText('');
     toast.success('Comment posted');
   };
@@ -408,7 +449,18 @@ export function ProjectDetailModal({
   // Save edited title
   const handleSaveTitle = () => {
     if (titleDraft.trim() && titleDraft.trim() !== project.name) {
-      handleUpdate({ name: titleDraft.trim() });
+      const newActivity: ProjectActivity = {
+        id: generateId('act'),
+        actorName: currentUser.fullName,
+        actorAvatar: currentUser.avatar,
+        action: 'renamed project to',
+        target: titleDraft.trim(),
+        timestamp: new Date().toISOString(),
+      };
+      handleUpdate({
+        name: titleDraft.trim(),
+        activities: [newActivity, ...activities],
+      });
     }
     setIsEditingTitle(false);
   };
@@ -424,8 +476,20 @@ export function ProjectDetailModal({
       url: a.url,
       uploadedAt: a.uploadedAt,
     }));
+    const newActivity: ProjectActivity = {
+      id: generateId('act'),
+      actorName: currentUser.fullName,
+      actorAvatar: currentUser.avatar,
+      action:
+        formatted.length === 1
+          ? 'uploaded attachment'
+          : `uploaded ${formatted.length} attachments`,
+      target: formatted.length === 1 ? formatted[0].name : undefined,
+      timestamp: new Date().toISOString(),
+    };
     handleUpdate({
       attachments: [...(project.attachments || []), ...formatted],
+      activities: [newActivity, ...activities],
     });
     setIsUploadModalOpen(false);
     toast.success('Attachments added');
@@ -537,7 +601,23 @@ export function ProjectDetailModal({
                       type="button"
                       onClick={() => {
                         setIsMoreMenuOpen(false);
-                        handleUpdate({ status: 'Completed', progress: 100 });
+                        const newActivity: ProjectActivity = {
+                          id: generateId('act'),
+                          actorName: currentUser.fullName,
+                          actorAvatar: currentUser.avatar,
+                          action: 'marked project as completed',
+                          timestamp: new Date().toISOString(),
+                          badge: {
+                            type: 'status_change',
+                            from: project.status,
+                            to: 'Completed',
+                          },
+                        };
+                        handleUpdate({
+                          status: 'Completed',
+                          progress: 100,
+                          activities: [newActivity, ...activities],
+                        });
                         toast.success('Marked as completed');
                       }}
                       className="w-full text-left px-3.5 py-2 text-xs font-medium text-primary-dark hover:bg-primary-surface/50 transition-colors cursor-pointer"
@@ -642,45 +722,73 @@ export function ProjectDetailModal({
                 {/* Subtitle / Description with Expand / Minimise & Bottom Blur Fade */}
                 {cleanedDescription ? (
                   <div className="relative mt-1.5">
-                    <div
-                      ref={descriptionRef}
-                      className={`rich-text-editor-content text-xs sm:text-sm text-primary-dark/85 leading-relaxed max-w-2xl font-normal transition-all duration-300 ease-in-out ${
+                    <motion.div
+                      initial={false}
+                      animate={{
+                        height: !isDescriptionExpanded && canExpand ? 96 : 'auto',
+                      }}
+                      transition={{
+                        duration: 0.38,
+                        ease: [0.16, 1, 0.3, 1],
+                      }}
+                      className={
                         !isDescriptionExpanded && canExpand
-                          ? 'max-h-24 overflow-hidden select-none'
-                          : 'max-h-none'
-                      }`}
-                      dangerouslySetInnerHTML={{ __html: cleanedDescription }}
-                    />
+                          ? 'overflow-hidden select-none'
+                          : 'overflow-hidden'
+                      }
+                    >
+                      <div
+                        ref={descriptionRef}
+                        className="rich-text-editor-content text-xs sm:text-sm text-primary-dark/85 leading-relaxed max-w-2xl font-normal"
+                        dangerouslySetInnerHTML={{ __html: cleanedDescription }}
+                      />
+                    </motion.div>
 
                     {/* Bottom Read More Blur / Fade Overlay with Dropdown Arrow */}
-                    {!isDescriptionExpanded && canExpand && (
-                      <div className="absolute -bottom-1 left-0 right-0 h-14 bg-gradient-to-t from-white via-white/85 to-transparent flex items-end justify-center pointer-events-none pb-0.5">
-                        <button
-                          type="button"
-                          onClick={() => setIsDescriptionExpanded(true)}
-                          className="pointer-events-auto p-1 rounded-full text-primary-dark/75 hover:text-primary-dark bg-white/95 hover:bg-white border border-primary-medium/20 shadow-xs hover:shadow-sm transition-all cursor-pointer hover:scale-105 active:scale-95"
-                          title="Read more"
-                          aria-label="Expand description"
+                    <AnimatePresence>
+                      {!isDescriptionExpanded && canExpand && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.22, ease: 'easeOut' }}
+                          className="absolute -bottom-1 left-0 right-0 h-14 bg-gradient-to-t from-white via-white/85 to-transparent flex items-end justify-center pointer-events-none pb-0.5"
                         >
-                          <LuChevronDown className="w-4 h-4 text-primary-dark" />
-                        </button>
-                      </div>
-                    )}
+                          <button
+                            type="button"
+                            onClick={() => setIsDescriptionExpanded(true)}
+                            className="pointer-events-auto p-1 rounded-full text-primary-dark/75 hover:text-primary-dark bg-white/95 hover:bg-white border border-primary-medium/20 shadow-xs hover:shadow-sm transition-all cursor-pointer hover:scale-105 active:scale-95"
+                            title="Read more"
+                            aria-label="Expand description"
+                          >
+                            <LuChevronDown className="w-4 h-4 text-primary-dark" />
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
                     {/* Minimise Arrow Button when Expanded */}
-                    {isDescriptionExpanded && canExpand && (
-                      <div className="flex justify-center mt-1">
-                        <button
-                          type="button"
-                          onClick={() => setIsDescriptionExpanded(false)}
-                          className="p-1 rounded-full text-primary-medium/70 hover:text-primary-dark hover:bg-primary-surface/40 transition-colors cursor-pointer"
-                          title="Minimise description"
-                          aria-label="Minimise description"
+                    <AnimatePresence>
+                      {isDescriptionExpanded && canExpand && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -4, scale: 0.92 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -4, scale: 0.92 }}
+                          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                          className="flex justify-center mt-1"
                         >
-                          <LuChevronDown className="w-4 h-4 rotate-180 text-primary-dark" />
-                        </button>
-                      </div>
-                    )}
+                          <button
+                            type="button"
+                            onClick={() => setIsDescriptionExpanded(false)}
+                            className="p-1 rounded-full text-primary-medium/70 hover:text-primary-dark hover:bg-primary-surface/40 transition-colors cursor-pointer hover:scale-105 active:scale-95"
+                            title="Minimise description"
+                            aria-label="Minimise description"
+                          >
+                            <LuChevronDown className="w-4 h-4 rotate-180 text-primary-dark" />
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 ) : (
                   <p className="text-xs sm:text-sm text-primary-medium/50 italic mt-1.5">
@@ -716,7 +824,26 @@ export function ProjectDetailModal({
                             key={st}
                             type="button"
                             onClick={() => {
-                              handleUpdate({ status: st });
+                              if (st !== project.status) {
+                                const newActivity: ProjectActivity = {
+                                  id: generateId('act'),
+                                  actorName: currentUser.fullName,
+                                  actorAvatar: currentUser.avatar,
+                                  action: 'changed status from',
+                                  target: `${project.status} to ${st}`,
+                                  timestamp: new Date().toISOString(),
+                                  badge: {
+                                    type: 'status_change',
+                                    from: project.status,
+                                    to: st,
+                                  },
+                                };
+                                handleUpdate({
+                                  status: st,
+                                  progress: st === 'Completed' ? 100 : project.progress,
+                                  activities: [newActivity, ...activities],
+                                });
+                              }
                               setIsStatusMenuOpen(false);
                             }}
                             className={`w-full text-left px-3 py-1.5 text-xs font-medium hover:bg-primary-surface/50 transition-colors flex items-center justify-between cursor-pointer ${
@@ -750,15 +877,16 @@ export function ProjectDetailModal({
                       <>
                         {/* Manager Group */}
                         {managers.length > 0 && (
-                          <div className="flex items-center flex-wrap gap-2">
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-bold bg-[#f5efe6] text-primary-dark border border-primary-medium/20 tracking-wide shrink-0">
-                              Manager
+                          <div className="flex items-start gap-2.5">
+                            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-bold bg-[#f5efe6] text-primary-dark border border-primary-medium/20 tracking-wide shrink-0 self-start mt-0.5 min-w-[64px] text-center">
+                              {managers.length > 1 ? 'Managers' : 'Manager'}
                             </span>
-                            <div className="flex items-center flex-wrap gap-2.5">
+                            <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-x-3 sm:gap-x-4 gap-y-2 min-w-0">
                               {managers.map((member) => (
                                 <div
                                   key={member.id}
-                                  className="inline-flex items-center gap-1.5"
+                                  className="inline-flex items-center gap-1.5 min-w-0"
+                                  title={member.name}
                                 >
                                   <div className="relative w-5 h-5 rounded-full overflow-hidden shrink-0 border border-primary-medium/15">
                                     <Image
@@ -769,7 +897,7 @@ export function ProjectDetailModal({
                                       sizes="20px"
                                     />
                                   </div>
-                                  <span className="text-xs font-semibold text-primary-dark">
+                                  <span className="text-xs font-semibold text-primary-dark truncate">
                                     {member.name}
                                   </span>
                                 </div>
@@ -780,15 +908,16 @@ export function ProjectDetailModal({
 
                         {/* Member Group */}
                         {regularMembers.length > 0 && (
-                          <div className="flex items-center flex-wrap gap-2">
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-bold bg-primary-surface/50 text-primary-medium/80 border border-primary-medium/15 tracking-wide shrink-0">
-                              Member
+                          <div className="flex items-start gap-2.5">
+                            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-bold bg-primary-surface/50 text-primary-medium/80 border border-primary-medium/15 tracking-wide shrink-0 self-start mt-0.5 min-w-[64px] text-center">
+                              {regularMembers.length > 1 ? 'Members' : 'Member'}
                             </span>
-                            <div className="flex items-center flex-wrap gap-2.5">
+                            <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-x-3 sm:gap-x-4 gap-y-2 min-w-0">
                               {regularMembers.map((member) => (
                                 <div
                                   key={member.id}
-                                  className="inline-flex items-center gap-1.5"
+                                  className="inline-flex items-center gap-1.5 min-w-0"
+                                  title={member.name}
                                 >
                                   <div className="relative w-5 h-5 rounded-full overflow-hidden shrink-0 border border-primary-medium/15">
                                     <Image
@@ -799,7 +928,7 @@ export function ProjectDetailModal({
                                       sizes="20px"
                                     />
                                   </div>
-                                  <span className="text-xs font-semibold text-primary-dark">
+                                  <span className="text-xs font-semibold text-primary-dark truncate">
                                     {member.name}
                                   </span>
                                 </div>
@@ -858,7 +987,20 @@ export function ProjectDetailModal({
                             key={pr}
                             type="button"
                             onClick={() => {
-                              handleUpdate({ priority: pr });
+                              if (pr !== (project.priority || 'Low')) {
+                                const newActivity: ProjectActivity = {
+                                  id: generateId('act'),
+                                  actorName: currentUser.fullName,
+                                  actorAvatar: currentUser.avatar,
+                                  action: `updated priority to`,
+                                  target: pr,
+                                  timestamp: new Date().toISOString(),
+                                };
+                                handleUpdate({
+                                  priority: pr,
+                                  activities: [newActivity, ...activities],
+                                });
+                              }
                               setIsPriorityMenuOpen(false);
                             }}
                             className={`w-full text-left px-3 py-1.5 text-xs font-medium hover:bg-primary-surface/50 transition-colors flex items-center justify-between cursor-pointer ${
@@ -1357,41 +1499,55 @@ export function ProjectDetailModal({
 
                   {/* Vertical Timeline */}
                   <div className="relative pl-5 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-primary-medium/15">
-                    {activities.map((act) => (
-                      <div key={act.id} className="relative text-xs">
-                        {/* Timeline Node Icon / Avatar */}
-                        <div className="absolute -left-5 top-0.5 w-4.5 h-4.5 rounded-full overflow-hidden bg-white border border-primary-medium/20 flex items-center justify-center shrink-0">
-                          {act.actorAvatar ? (
-                            <Image
-                              src={act.actorAvatar}
-                              alt={act.actorName}
-                              width={18}
-                              height={18}
-                              className="object-cover"
-                            />
-                          ) : (
-                            <div className="w-2 h-2 rounded-full bg-primary-dark" />
-                          )}
-                        </div>
+                    {activities.map((act) => {
+                      const actDate = getValidActivityDate(
+                        act,
+                        project.createdAt,
+                        project.id
+                      );
+                      const relativeTime = formatRealTimeRelative(
+                        actDate,
+                        new Date(currentTime)
+                      );
 
-                        {/* Event Content */}
-                        <div className="pl-2">
-                          <div className="leading-snug">
-                            <span className="font-bold text-primary-dark">
-                              {act.actorName}
-                            </span>{' '}
-                            <span className="text-primary-medium/70 font-normal">
-                              {act.action}
-                            </span>{' '}
-                            {act.target && (
-                              <span className="font-bold text-primary-dark">
-                                {act.target}
-                              </span>
+                      return (
+                        <div key={act.id} className="relative text-xs">
+                          {/* Timeline Node Icon / Avatar */}
+                          <div className="absolute -left-5 top-0.5 w-4.5 h-4.5 rounded-full overflow-hidden bg-white border border-primary-medium/20 flex items-center justify-center shrink-0">
+                            {act.actorAvatar ? (
+                              <Image
+                                src={act.actorAvatar}
+                                alt={act.actorName}
+                                width={18}
+                                height={18}
+                                className="object-cover"
+                              />
+                            ) : (
+                              <div className="w-2 h-2 rounded-full bg-primary-dark" />
                             )}
                           </div>
-                          <div className="text-[11px] text-primary-medium/50 mt-0.5 font-normal">
-                            {act.timestamp}
-                          </div>
+
+                          {/* Event Content */}
+                          <div className="pl-2">
+                            <div className="leading-snug">
+                              <span className="font-bold text-primary-dark">
+                                {act.actorName}
+                              </span>{' '}
+                              <span className="text-primary-medium/70 font-normal">
+                                {act.action}
+                              </span>{' '}
+                              {act.target && (
+                                <span className="font-bold text-primary-dark">
+                                  {act.target}
+                                </span>
+                              )}
+                            </div>
+                            <div
+                              className="text-[11px] text-primary-medium/50 mt-0.5 font-normal tabular-nums"
+                              title={actDate.toLocaleString()}
+                            >
+                              {relativeTime}
+                            </div>
 
                           {/* Event Badge / Transition Pill */}
                           {act.badge && act.badge.type === 'check' && (
@@ -1416,7 +1572,8 @@ export function ProjectDetailModal({
                           )}
                         </div>
                       </div>
-                    ))}
+                    );
+                  })}
                   </div>
                 </div>
               </div>

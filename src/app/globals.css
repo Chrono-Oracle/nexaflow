@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 :root {
+  interpolate-size: allow-keywords;
+
   /* NexaFlow Brand Colors (from NFColors) */
   --primary-dark: #26150b;       /* Dark Chocolate / Deep Charcoal Brown */
   --primary: #403022;            /* Core Brand Espresso */

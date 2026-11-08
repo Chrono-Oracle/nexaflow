@@ -192,7 +192,7 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
         actorAvatar: primaryOwner.avatar,
         action: 'created project',
         target: name.trim(),
-        timestamp: 'Just now',
+        timestamp: new Date().toISOString(),
         badge: {
           type: 'create' as const,
         },
