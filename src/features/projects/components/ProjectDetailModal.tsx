@@ -38,9 +38,17 @@ import {
   ProjectAssignedMember,
 } from '../types/project.types';
 import { getCurrentUser } from '@/data/users';
-import { useUpdateProjectMutation, useDeleteProjectMutation } from '@/hooks/useDashboardData';
+import {
+  useUpdateProjectMutation,
+  useDeleteProjectMutation,
+  useTasksQuery,
+  useAddTaskMutation,
+  useUpdateTaskStatusMutation,
+  useUpdateTaskMutation,
+  useDeleteTaskMutation,
+} from '@/hooks/useDashboardData';
 import { FileIconBadge, FileUploadModal } from '@/components/ui/FileUpload';
-import { TaskAttachment } from '@/components/ui/FileUpload/fileUpload.types';
+import { TaskAttachment, TaskStatus } from '@/features/tasks/types/task.types';
 import { cleanTrailingEmptyHtml } from '../utils/htmlSanitizer';
 import {
   getValidActivityDate,
@@ -143,19 +151,19 @@ export function ProjectDetailModal({
   const deleteProjectMutation = useDeleteProjectMutation();
 
   // Active tab state
-  const [activeTab, setActiveTab] = useState<'subtask' | 'attachment' | 'comments'>('subtask');
+  const [activeTab, setActiveTab] = useState<'task' | 'attachment' | 'comments'>('task');
 
-  // Subtask section collapsed state
-  const [isSubtaskCollapsed, setIsSubtaskCollapsed] = useState(false);
+  // Task section collapsed state
+  const [isTaskCollapsed, setIsTaskCollapsed] = useState(false);
 
-  // Quick add subtask input state
-  const [isAddingSubtask, setIsAddingSubtask] = useState(false);
-  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
-  const addSubtaskInputRef = useRef<HTMLInputElement>(null);
+  // Quick add task input state
+  const [isAddingTask, setIsAddingTask] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const addTaskInputRef = useRef<HTMLInputElement>(null);
 
-  // Edit subtask state
-  const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
-  const [editingSubtaskTitle, setEditingSubtaskTitle] = useState('');
+  // Edit task state
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingTaskTitle, setEditingTaskTitle] = useState('');
 
   // Dropdown states
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
@@ -231,23 +239,54 @@ export function ProjectDetailModal({
     return () => clearInterval(interval);
   }, [isOpen]);
 
-  // Focus add subtask input when toggled open
+  // Focus add task input when toggled open
   useEffect(() => {
-    if (isAddingSubtask && addSubtaskInputRef.current) {
-      addSubtaskInputRef.current.focus();
+    if (isAddingTask && addTaskInputRef.current) {
+      addTaskInputRef.current.focus();
     }
-  }, [isAddingSubtask]);
+  }, [isAddingTask]);
 
-  // Subtasks list directly from saved project data
-  const subtasks: ProjectSubtask[] = useMemo(() => {
-    return project?.subtasks || [];
-  }, [project?.subtasks]);
+  // Tasks belonging to this project (from tasks store)
+  const { data: projectTasks = [] } = useTasksQuery(project?.id);
+  const addTaskMutation = useAddTaskMutation();
+  const updateTaskStatusMutation = useUpdateTaskStatusMutation();
+  const updateTaskMutation = useUpdateTaskMutation();
+  const deleteTaskMutation = useDeleteTaskMutation();
 
-  const completedSubtasksCount = subtasks.filter((s) => s.completed).length;
-  const totalSubtasksCount = subtasks.length;
+  // Unified tasks list (combining tasks store items with any legacy project.subtasks)
+  const tasks = useMemo(() => {
+    const mapped = projectTasks.map((t) => ({
+      id: t.id,
+      title: t.title,
+      completed: t.status === 'Completed',
+      isFromTaskStore: true,
+      rawTask: t,
+    }));
+
+    const legacy = (project?.subtasks || [])
+      .filter(
+        (s) =>
+          !mapped.some(
+            (m) =>
+              m.id === s.id ||
+              m.title.trim().toLowerCase() === s.title.trim().toLowerCase()
+          )
+      )
+      .map((s) => ({
+        id: s.id,
+        title: s.title,
+        completed: Boolean(s.completed),
+        isFromTaskStore: false,
+      }));
+
+    return [...mapped, ...legacy];
+  }, [projectTasks, project?.subtasks]);
+
+  const completedTasksCount = tasks.filter((t) => t.completed).length;
+  const totalTasksCount = tasks.length;
   const calculatedProgress =
-    totalSubtasksCount > 0
-      ? Math.round((completedSubtasksCount / totalSubtasksCount) * 100)
+    totalTasksCount > 0
+      ? Math.round((completedTasksCount / totalTasksCount) * 100)
       : project?.progress || 0;
 
   // Activities list directly from saved project data, or real project creation event
@@ -306,27 +345,45 @@ export function ProjectDetailModal({
     }
   };
 
-  // Toggle subtask completion
-  const handleToggleSubtask = (subtaskId: string) => {
-    const nextSubtasks = subtasks.map((item) =>
-      item.id === subtaskId ? { ...item, completed: !item.completed } : item
-    );
-    const toggledItem = nextSubtasks.find((s) => s.id === subtaskId);
-    const newCompletedCount = nextSubtasks.filter((s) => s.completed).length;
-    const newProgress = Math.round((newCompletedCount / nextSubtasks.length) * 100);
+  // Toggle task completion
+  const handleToggleTask = async (taskItem: {
+    id: string;
+    title: string;
+    completed?: boolean;
+    isFromTaskStore?: boolean;
+  }) => {
+    const nextCompleted = !taskItem.completed;
+    const nextStatus: TaskStatus = nextCompleted ? 'Completed' : 'To Do';
 
     const newActivity: ProjectActivity = {
       id: generateId('act'),
       actorName: currentUser.fullName,
       actorAvatar: currentUser.avatar,
-      action: toggledItem?.completed ? 'completed subtask' : 'reopened subtask',
-      target: toggledItem?.title,
+      action: nextCompleted ? 'completed task' : 'reopened task',
+      target: taskItem.title,
       timestamp: new Date().toISOString(),
       badge: {
         type: 'check',
-        label: toggledItem?.title,
+        label: taskItem.title,
       },
     };
+
+    if (taskItem.isFromTaskStore) {
+      await updateTaskStatusMutation.mutateAsync({
+        taskId: taskItem.id,
+        status: nextStatus,
+      });
+    }
+
+    const nextSubtasks = (project.subtasks || []).map((s) =>
+      s.id === taskItem.id ? { ...s, completed: nextCompleted } : s
+    );
+
+    const updatedTasks = tasks.map((t) =>
+      t.id === taskItem.id ? { ...t, completed: nextCompleted } : t
+    );
+    const newCompletedCount = updatedTasks.filter((t) => t.completed).length;
+    const newProgress = Math.round((newCompletedCount / updatedTasks.length) * 100);
 
     handleUpdate({
       subtasks: nextSubtasks,
@@ -335,24 +392,16 @@ export function ProjectDetailModal({
     });
   };
 
-  // Add new subtask
-  const handleAddSubtask = () => {
-    if (!newSubtaskTitle.trim()) return;
-    const title = newSubtaskTitle.trim();
-    const newItem: ProjectSubtask = {
-      id: generateId('sub'),
-      title,
-      completed: false,
-    };
-    const nextSubtasks = [...subtasks, newItem];
-    const newCompletedCount = nextSubtasks.filter((s) => s.completed).length;
-    const newProgress = Math.round((newCompletedCount / nextSubtasks.length) * 100);
+  // Add new task
+  const handleAddTask = async () => {
+    if (!newTaskTitle.trim()) return;
+    const title = newTaskTitle.trim();
 
     const newActivity: ProjectActivity = {
       id: generateId('act'),
       actorName: currentUser.fullName,
       actorAvatar: currentUser.avatar,
-      action: 'added subtask',
+      action: 'added task',
       target: title,
       timestamp: new Date().toISOString(),
       badge: {
@@ -361,49 +410,128 @@ export function ProjectDetailModal({
       },
     };
 
+    // Save as full Task in storage
+    await addTaskMutation.mutateAsync({
+      title,
+      projectId: project.id,
+      status: 'To Do',
+      priority: 'Medium',
+      startDate: project.startDate || new Date().toISOString().split('T')[0],
+      deadline: project.deadline || new Date().toISOString().split('T')[0],
+    });
+
+    // Also sync to project subtasks for legacy compatibility
+    const newItem: ProjectSubtask = {
+      id: generateId('sub'),
+      title,
+      completed: false,
+    };
+    const nextSubtasks = [...(project.subtasks || []), newItem];
+
     handleUpdate({
       subtasks: nextSubtasks,
-      progress: newProgress,
-      taskCount: nextSubtasks.length,
+      taskCount: (project.taskCount || 0) + 1,
       activities: [newActivity, ...activities],
     });
-    setNewSubtaskTitle('');
-    setIsAddingSubtask(false);
-    toast.success('Subtask added');
+
+    setNewTaskTitle('');
+    setIsAddingTask(false);
+    toast.success('Task added');
   };
 
-  // Save edited subtask title
-  const handleSaveSubtaskTitle = (subtaskId: string) => {
-    if (!editingSubtaskTitle.trim()) return;
-    const nextSubtasks = subtasks.map((item) =>
-      item.id === subtaskId ? { ...item, title: editingSubtaskTitle.trim() } : item
+  // Save edited task title
+  const handleSaveTaskTitle = async (taskItem: {
+    id: string;
+    title: string;
+    isFromTaskStore?: boolean;
+  }) => {
+    if (!editingTaskTitle.trim()) return;
+    const newTitle = editingTaskTitle.trim();
+    if (newTitle === taskItem.title) {
+      setEditingTaskId(null);
+      return;
+    }
+
+    if (taskItem.isFromTaskStore) {
+      await updateTaskMutation.mutateAsync({
+        id: taskItem.id,
+        updates: { title: newTitle },
+      });
+    }
+
+    const nextSubtasks = (project.subtasks || []).map((s) =>
+      s.id === taskItem.id ? { ...s, title: newTitle } : s
     );
-    handleUpdate({ subtasks: nextSubtasks });
-    setEditingSubtaskId(null);
-    setEditingSubtaskTitle('');
+
+    const newActivity: ProjectActivity = {
+      id: generateId('act'),
+      actorName: currentUser.fullName,
+      actorAvatar: currentUser.avatar,
+      action: 'renamed task to',
+      target: newTitle,
+      timestamp: new Date().toISOString(),
+    };
+
+    handleUpdate({
+      subtasks: nextSubtasks,
+      activities: [newActivity, ...activities],
+    });
+
+    setEditingTaskId(null);
+    setEditingTaskTitle('');
   };
 
-  // Delete subtask
-  const handleDeleteSubtask = (subtaskId: string) => {
-    const nextSubtasks = subtasks.filter((item) => item.id !== subtaskId);
-    const newCompletedCount = nextSubtasks.filter((s) => s.completed).length;
+  // Delete task
+  const handleDeleteTask = async (taskItem: {
+    id: string;
+    title: string;
+    isFromTaskStore?: boolean;
+  }) => {
+    if (taskItem.isFromTaskStore) {
+      await deleteTaskMutation.mutateAsync(taskItem.id);
+    }
+
+    const nextSubtasks = (project.subtasks || []).filter((s) => s.id !== taskItem.id);
+    const updatedTasks = tasks.filter((t) => t.id !== taskItem.id);
+    const newCompletedCount = updatedTasks.filter((t) => t.completed).length;
     const newProgress =
-      nextSubtasks.length > 0
-        ? Math.round((newCompletedCount / nextSubtasks.length) * 100)
+      updatedTasks.length > 0
+        ? Math.round((newCompletedCount / updatedTasks.length) * 100)
         : 0;
+
+    const newActivity: ProjectActivity = {
+      id: generateId('act'),
+      actorName: currentUser.fullName,
+      actorAvatar: currentUser.avatar,
+      action: 'deleted task',
+      target: taskItem.title,
+      timestamp: new Date().toISOString(),
+    };
 
     handleUpdate({
       subtasks: nextSubtasks,
       progress: newProgress,
-      taskCount: nextSubtasks.length,
+      taskCount: updatedTasks.length,
+      activities: [newActivity, ...activities],
     });
-    toast.info('Subtask deleted');
+
+    toast.info('Task deleted');
   };
 
   // Toggle reminder switch
   const handleToggleReminder = () => {
     const nextVal = !(project.reminderActive ?? false);
-    handleUpdate({ reminderActive: nextVal });
+    const newActivity: ProjectActivity = {
+      id: generateId('act'),
+      actorName: currentUser.fullName,
+      actorAvatar: currentUser.avatar,
+      action: nextVal ? 'activated reminder' : 'deactivated reminder',
+      timestamp: new Date().toISOString(),
+    };
+    handleUpdate({
+      reminderActive: nextVal,
+      activities: [newActivity, ...activities],
+    });
     if (nextVal) {
       toast.success('Reminder activated');
     } else {
@@ -1021,20 +1149,20 @@ export function ProjectDetailModal({
                 </div>
               </div>
 
-              {/* 3. Tabs: [ Subtask ] [ Attachment ] [ Comments ] */}
+              {/* 3. Tabs: [ Task ] [ Attachment ] [ Comments ] */}
               <div className="border-b border-primary-medium/15 pt-2 mt-5">
                 <div className="flex items-center gap-6">
                   <button
                     type="button"
-                    onClick={() => setActiveTab('subtask')}
+                    onClick={() => setActiveTab('task')}
                     className={`pb-2.5 text-xs font-semibold transition-colors relative cursor-pointer ${
-                      activeTab === 'subtask'
+                      activeTab === 'task'
                         ? 'text-primary-dark font-bold'
                         : 'text-primary-medium/60 hover:text-primary-dark'
                     }`}
                   >
-                    <span>{t('tabs.subtask')}</span>
-                    {activeTab === 'subtask' && (
+                    <span>Task</span>
+                    {activeTab === 'task' && (
                       <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-dark rounded-full" />
                     )}
                   </button>
@@ -1073,57 +1201,54 @@ export function ProjectDetailModal({
 
               {/* 4. Tab Content */}
               <div className="flex-1 mt-3.5">
-                {/* ---------------- SUBTASK TAB ---------------- */}
-                {activeTab === 'subtask' && (
+                {/* ---------------- TASK TAB ---------------- */}
+                {activeTab === 'task' && (
                   <div className="space-y-4">
-                    {/* Header Row: ▾ Subtask 12/25  ···  [+ Add Subtask] */}
+                    {/* Header Row: ▾ Task 1/3  ···  [+ Add Task] */}
                     <div className="flex items-center justify-between">
                       <button
                         type="button"
-                        onClick={() => setIsSubtaskCollapsed((prev) => !prev)}
+                        onClick={() => setIsTaskCollapsed((prev) => !prev)}
                         className="inline-flex items-center gap-1.5 text-xs font-bold text-primary-dark hover:text-primary transition-colors cursor-pointer select-none"
                       >
-                        {isSubtaskCollapsed ? (
+                        {isTaskCollapsed ? (
                           <LuChevronRight className="w-3.5 h-3.5 text-primary-medium/70" />
                         ) : (
                           <LuChevronDown className="w-3.5 h-3.5 text-primary-medium/70" />
                         )}
                         <span>
-                          {t('subtaskHeader', {
-                            completed: completedSubtasksCount,
-                            total: totalSubtasksCount,
-                          })}
+                          Task {completedTasksCount}/{totalTasksCount}
                         </span>
                       </button>
 
                       <button
                         type="button"
-                        onClick={() => setIsAddingSubtask(true)}
+                        onClick={() => setIsAddingTask(true)}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary-medium/20 text-xs font-semibold text-primary-dark hover:bg-primary-surface/40 hover:border-primary-medium/30 transition-all cursor-pointer shadow-2xs"
                       >
                         <LuPlus className="w-3.5 h-3.5" />
-                        <span>{t('addSubtask')}</span>
+                        <span>Add Task</span>
                       </button>
                     </div>
 
-                    {/* Inline Add Subtask Input Form */}
-                    {isAddingSubtask && (
+                    {/* Inline Add Task Input Form */}
+                    {isAddingTask && (
                       <div className="flex items-center gap-2 p-2.5 rounded-xl border border-primary-medium/25 bg-primary-surface/20">
                         <input
-                          ref={addSubtaskInputRef}
+                          ref={addTaskInputRef}
                           type="text"
-                          value={newSubtaskTitle}
-                          onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                          value={newTaskTitle}
+                          onChange={(e) => setNewTaskTitle(e.target.value)}
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleAddSubtask();
-                            if (e.key === 'Escape') setIsAddingSubtask(false);
+                            if (e.key === 'Enter') handleAddTask();
+                            if (e.key === 'Escape') setIsAddingTask(false);
                           }}
-                          placeholder={t('subtaskPlaceholder')}
+                          placeholder="Enter task title and press Enter..."
                           className="flex-1 bg-white px-3 py-1.5 text-xs font-medium text-primary-dark rounded-lg border border-primary-medium/20 focus:outline-none focus:ring-1 focus:ring-primary"
                         />
                         <button
                           type="button"
-                          onClick={handleAddSubtask}
+                          onClick={handleAddTask}
                           className="px-3 py-1.5 bg-primary-dark text-white rounded-lg text-xs font-semibold hover:bg-primary transition-colors cursor-pointer"
                         >
                           {t('add')}
@@ -1131,8 +1256,8 @@ export function ProjectDetailModal({
                         <button
                           type="button"
                           onClick={() => {
-                            setNewSubtaskTitle('');
-                            setIsAddingSubtask(false);
+                            setNewTaskTitle('');
+                            setIsAddingTask(false);
                           }}
                           className="px-2.5 py-1.5 text-primary-medium/70 hover:text-primary-dark rounded-lg text-xs font-medium transition-colors cursor-pointer"
                         >
@@ -1141,32 +1266,32 @@ export function ProjectDetailModal({
                       </div>
                     )}
 
-                    {/* Checklist Items */}
-                    {!isSubtaskCollapsed && (
+                    {/* Task Checklist Items */}
+                    {!isTaskCollapsed && (
                       <div className="space-y-1">
-                        {subtasks.length === 0 ? (
+                        {tasks.length === 0 ? (
                           <div className="py-10 flex flex-col items-center justify-center text-center">
                             <div className="w-10 h-10 rounded-full bg-primary-surface/50 flex items-center justify-center text-primary-medium/60 mb-2.5">
                               <LuCheck className="w-4 h-4" />
                             </div>
                             <p className="text-xs font-semibold text-primary-dark mb-1">
-                              {t('noSubtasks') || 'No subtasks yet'}
+                              No tasks yet. Add one to track progress.
                             </p>
                             <p className="text-[11px] text-primary-medium/60 max-w-xs mb-3">
-                              Break down this project into smaller checklist tasks and track completion progress.
+                              Break down this project into smaller tasks and track completion progress.
                             </p>
                             <button
                               type="button"
-                              onClick={() => setIsAddingSubtask(true)}
+                              onClick={() => setIsAddingTask(true)}
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-dark text-white text-xs font-semibold hover:bg-primary transition-colors cursor-pointer shadow-2xs"
                             >
                               <LuPlus className="w-3.5 h-3.5" />
-                              <span>{t('addSubtask')}</span>
+                              <span>Add Task</span>
                             </button>
                           </div>
                         ) : (
-                          subtasks.map((item) => {
-                            const isEditing = editingSubtaskId === item.id;
+                          tasks.map((item) => {
+                            const isEditing = editingTaskId === item.id;
 
                             return (
                               <div
@@ -1177,7 +1302,7 @@ export function ProjectDetailModal({
                                 <div className="flex items-center gap-3 min-w-0 flex-1">
                                   <button
                                     type="button"
-                                    onClick={() => handleToggleSubtask(item.id)}
+                                    onClick={() => handleToggleTask(item)}
                                     className={`w-4.5 h-4.5 rounded-md flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
                                       item.completed
                                         ? 'bg-[#10b981] text-white shadow-2xs'
@@ -1192,25 +1317,25 @@ export function ProjectDetailModal({
                                   {isEditing ? (
                                     <input
                                       type="text"
-                                      value={editingSubtaskTitle}
+                                      value={editingTaskTitle}
                                       onChange={(e) =>
-                                        setEditingSubtaskTitle(e.target.value)
+                                        setEditingTaskTitle(e.target.value)
                                       }
                                       onKeyDown={(e) => {
                                         if (e.key === 'Enter')
-                                          handleSaveSubtaskTitle(item.id);
+                                          handleSaveTaskTitle(item);
                                         if (e.key === 'Escape')
-                                          setEditingSubtaskId(null);
+                                          setEditingTaskId(null);
                                       }}
                                       onBlur={() =>
-                                        handleSaveSubtaskTitle(item.id)
+                                        handleSaveTaskTitle(item)
                                       }
                                       autoFocus
                                       className="text-xs font-medium text-primary-dark bg-white px-2 py-1 rounded border border-primary-medium/30 flex-1 focus:outline-none focus:ring-1 focus:ring-primary"
                                     />
                                   ) : (
                                     <span
-                                      onClick={() => handleToggleSubtask(item.id)}
+                                      onClick={() => handleToggleTask(item)}
                                       className={`text-xs font-medium transition-colors cursor-pointer truncate ${
                                         item.completed
                                           ? 'text-primary-medium/50 line-through'
@@ -1227,19 +1352,19 @@ export function ProjectDetailModal({
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      setEditingSubtaskId(item.id);
-                                      setEditingSubtaskTitle(item.title);
+                                      setEditingTaskId(item.id);
+                                      setEditingTaskTitle(item.title);
                                     }}
                                     className="p-1 hover:text-primary-dark transition-colors cursor-pointer"
-                                    title="Edit subtask"
+                                    title="Edit task"
                                   >
                                     <LuSquarePen className="w-3.5 h-3.5" />
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => handleDeleteSubtask(item.id)}
+                                    onClick={() => handleDeleteTask(item)}
                                     className="p-1 hover:text-red-600 transition-colors cursor-pointer"
-                                    title="Delete subtask"
+                                    title="Delete task"
                                   >
                                     <LuTrash2 className="w-3.5 h-3.5" />
                                   </button>
@@ -1315,7 +1440,18 @@ export function ProjectDetailModal({
                                   const filtered = (project.attachments || []).filter(
                                     (a) => a.id !== att.id
                                   );
-                                  handleUpdate({ attachments: filtered });
+                                  const newActivity: ProjectActivity = {
+                                    id: generateId('act'),
+                                    actorName: currentUser.fullName,
+                                    actorAvatar: currentUser.avatar,
+                                    action: 'removed attachment',
+                                    target: att.name,
+                                    timestamp: new Date().toISOString(),
+                                  };
+                                  handleUpdate({
+                                    attachments: filtered,
+                                    activities: [newActivity, ...activities],
+                                  });
                                 }}
                                 className="p-1.5 text-primary-medium/70 hover:text-red-600 transition-colors cursor-pointer"
                                 title="Delete"

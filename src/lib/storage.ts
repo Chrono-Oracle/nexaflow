@@ -6,7 +6,7 @@ import {
   calculateDashboardStats,
 } from '@/data/mockData';
 import { currentUser } from '@/data/userDashboard';
-import { Project } from '@/features/projects/types/project.types';
+import { Project, ProjectActivity } from '@/features/projects/types/project.types';
 import { Task, TaskStatus } from '@/features/tasks/types/task.types';
 import { TeamMember } from '@/features/team/types/team.types';
 import { ActivityItem } from '@/features/notifications/types/activity.types';
@@ -228,7 +228,30 @@ export const storageApi = {
     setStoredItem(STORAGE_KEYS.TASKS, updated);
 
     // Sync project task count & recalculate progress
-    await storageApi.syncProjectStats(task.projectId);
+    if (task.projectId) {
+      await storageApi.syncProjectStats(task.projectId);
+      const projects = await storageApi.getProjects();
+      const pIdx = projects.findIndex((p) => p.id === task.projectId);
+      if (pIdx !== -1) {
+        const projectActivity: ProjectActivity = {
+          id: `act_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          actorName: currentUser.fullName,
+          actorAvatar: currentUser.avatar,
+          action: 'added task',
+          target: newTask.title,
+          timestamp: new Date().toISOString(),
+          badge: {
+            type: 'check',
+            label: newTask.title,
+          },
+        };
+        projects[pIdx] = {
+          ...projects[pIdx],
+          activities: [projectActivity, ...(projects[pIdx].activities || [])],
+        };
+        setStoredItem(STORAGE_KEYS.PROJECTS, projects);
+      }
+    }
 
     await storageApi.addActivity({
       type: 'task_status_changed',
@@ -271,9 +294,32 @@ export const storageApi = {
     targetTask.status = newStatus;
     setStoredItem(STORAGE_KEYS.TASKS, tasks);
 
-    // Recalculate project progress
-    if (targetTask.projectId) {
+    // Recalculate project progress & log activity to project
+    if (targetTask.projectId && oldStatus !== newStatus) {
       await storageApi.syncProjectStats(targetTask.projectId);
+      const projects = await storageApi.getProjects();
+      const pIdx = projects.findIndex((p) => p.id === targetTask.projectId);
+      if (pIdx !== -1) {
+        const projectActivity: ProjectActivity = {
+          id: `act_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          actorName: currentUser.fullName,
+          actorAvatar: currentUser.avatar,
+          action: newStatus === 'Completed' ? 'completed task' : `moved task to ${newStatus}`,
+          target: targetTask.title,
+          timestamp: new Date().toISOString(),
+          badge: {
+            type: newStatus === 'Completed' ? 'check' : 'status_change',
+            label: targetTask.title,
+            from: oldStatus,
+            to: newStatus,
+          },
+        };
+        projects[pIdx] = {
+          ...projects[pIdx],
+          activities: [projectActivity, ...(projects[pIdx].activities || [])],
+        };
+        setStoredItem(STORAGE_KEYS.PROJECTS, projects);
+      }
     }
 
     await storageApi.addActivity({
@@ -337,6 +383,23 @@ export const storageApi = {
 
     if (target.projectId) {
       await storageApi.syncProjectStats(target.projectId);
+      const projects = await storageApi.getProjects();
+      const pIdx = projects.findIndex((p) => p.id === target.projectId);
+      if (pIdx !== -1) {
+        const projectActivity: ProjectActivity = {
+          id: `act_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          actorName: currentUser.fullName,
+          actorAvatar: currentUser.avatar,
+          action: 'deleted task',
+          target: target.title,
+          timestamp: new Date().toISOString(),
+        };
+        projects[pIdx] = {
+          ...projects[pIdx],
+          activities: [projectActivity, ...(projects[pIdx].activities || [])],
+        };
+        setStoredItem(STORAGE_KEYS.PROJECTS, projects);
+      }
     }
 
     await storageApi.addActivity({

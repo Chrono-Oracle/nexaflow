@@ -15,6 +15,7 @@ import { RichTextEditor } from '@/components/ui/RichTextEditor';
 import { MiniCalendarPicker, getTodayDateString } from '@/components/ui/DatePicker';
 import { AssigneeSelector } from './AssigneeSelector';
 import { PrioritySelector } from './PrioritySelector';
+import { ProjectSelector } from './ProjectSelector';
 import {
   TaskPriority,
   TaskStatus,
@@ -29,6 +30,7 @@ interface AddTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultStatus?: TaskStatus;
+  defaultProjectId?: string;
 }
 
 function generateSubtaskId(): string {
@@ -41,6 +43,7 @@ export function AddTaskModal({
   isOpen,
   onClose,
   defaultStatus = 'To Do',
+  defaultProjectId = '',
 }: AddTaskModalProps) {
   const t = useTranslations('tasksPage');
   const [title, setTitle] = useState('');
@@ -48,9 +51,16 @@ export function AddTaskModal({
   const [startDate, setStartDate] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [priority, setPriority] = useState<TaskPriority>('Medium');
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(defaultProjectId);
+  const [prevDefaultProjectId, setPrevDefaultProjectId] = useState<string>(defaultProjectId);
   const [selectedUsers, setSelectedUsers] = useState<AuthUser[]>([]);
   const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+
+  if (prevDefaultProjectId !== defaultProjectId) {
+    setPrevDefaultProjectId(defaultProjectId);
+    setSelectedProjectId(defaultProjectId);
+  }
 
   // Subtasks state & drag/reorder
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
@@ -220,8 +230,8 @@ export function AddTaskModal({
     e.preventDefault();
     if (isSubmitDisabled) return;
 
-    const projectId =
-      projects.length > 0 ? projects[0].id : 'proj-general';
+            const projectId =
+      selectedProjectId || (projects.length > 0 ? projects[0].id : 'proj-general');
 
     const finalStartDate = startDate || todayKey;
     const finalDeadline = dueDate || finalStartDate;
@@ -253,6 +263,7 @@ export function AddTaskModal({
           setSelectedUsers([]);
           setAttachments([]);
           setSubtasks([]);
+          setSelectedProjectId(defaultProjectId || '');
           onClose();
         },
       }
@@ -470,6 +481,18 @@ export function AddTaskModal({
                   onChange={setPriority}
                 />
               </div>
+            </div>
+
+            {/* Project Selection Row */}
+            <div>
+              <label className="text-xs sm:text-sm font-semibold text-primary-dark mb-1.5 block">
+                {t('modal.project') || 'Project'}
+              </label>
+              <ProjectSelector
+                projects={projects}
+                value={selectedProjectId}
+                onChange={setSelectedProjectId}
+              />
             </div>
 
             {/* 5. Subtasks Section (at the bottom of Assign to & Priority) */}
