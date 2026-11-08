@@ -12,6 +12,7 @@ interface AssigneeSelectorProps {
   onSelectUsers?: (users: AuthUser[]) => void;
   selectedUserId?: string;
   onSelectUser?: (user?: AuthUser) => void;
+  availableUsers?: AuthUser[];
   disabled?: boolean;
 }
 
@@ -31,6 +32,7 @@ export function AssigneeSelector({
   onSelectUsers,
   selectedUserId,
   onSelectUser,
+  availableUsers,
   disabled = false,
 }: AssigneeSelectorProps) {
   const t = useTranslations('tasksPage');
@@ -43,14 +45,15 @@ export function AssigneeSelector({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({ display: 'none' });
 
-  const allUsers = useMemo(() => getAuthUsers(), []);
+  const defaultAllUsers = useMemo(() => getAuthUsers(), []);
+  const usersList = availableUsers ?? defaultAllUsers;
 
   // Resolve active selected users array
   const activeUsers: AuthUser[] = useMemo(() => {
     if (selectedUsers) return selectedUsers;
-    if (selectedUserId) return allUsers.filter((u) => u.id === selectedUserId);
+    if (selectedUserId) return usersList.filter((u) => u.id === selectedUserId);
     return [];
-  }, [selectedUsers, selectedUserId, allUsers]);
+  }, [selectedUsers, selectedUserId, usersList]);
 
   const handleUsersChange = (newUsers: AuthUser[]) => {
     if (onSelectUsers) {
@@ -138,7 +141,7 @@ export function AssigneeSelector({
   }, [isOpen, updatePosition, activeUsers.length]);
 
   // Filter users in real-time as user types
-  const filteredUsers = allUsers.filter((user) => {
+  const filteredUsers = usersList.filter((user) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase().trim();
     return (
@@ -226,7 +229,11 @@ export function AssigneeSelector({
                 setIsOpen(true);
                 updatePosition();
               }}
-              placeholder={t('assignee.notAssigned')}
+              placeholder={
+                usersList.length === 0
+                  ? 'No members in this project'
+                  : t('assignee.notAssigned')
+              }
               className="w-full bg-transparent text-xs font-medium text-primary-dark placeholder:text-primary-medium/75 focus:outline-none"
             />
           </div>
@@ -341,8 +348,10 @@ export function AssigneeSelector({
             {/* List of Users with Filter & Grayed Out State */}
             <div className="space-y-1">
               {filteredUsers.length === 0 ? (
-                <div className="py-5 text-center text-xs text-primary-medium/70">
-                  {t('assignee.noMatchingMembers', { query: searchQuery })}
+                <div className="py-5 text-center text-xs text-primary-medium/70 px-3">
+                  {usersList.length === 0
+                    ? 'No members added to this project yet.'
+                    : t('assignee.noMatchingMembers', { query: searchQuery })}
                 </div>
               ) : (
                 filteredUsers.map((user) => {

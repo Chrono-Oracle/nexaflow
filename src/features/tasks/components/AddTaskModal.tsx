@@ -24,7 +24,7 @@ import {
 } from '@/features/tasks/types/task.types';
 import { FileUploadModal, FileIconBadge } from '@/components/ui/FileUpload';
 import { useAddTaskMutation, useProjectsQuery } from '@/hooks/useDashboardData';
-import { AuthUser } from '@/data/users';
+import { AuthUser, getAuthUsers } from '@/data/users';
 
 interface AddTaskModalProps {
   isOpen: boolean;
@@ -46,6 +46,9 @@ export function AddTaskModal({
   defaultProjectId = '',
 }: AddTaskModalProps) {
   const t = useTranslations('tasksPage');
+  const { data: projects = [] } = useProjectsQuery();
+  const addTaskMutation = useAddTaskMutation();
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -57,9 +60,90 @@ export function AddTaskModal({
   const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
+  const allUsers = useMemo(() => getAuthUsers(), []);
+
+  // Compute assignable members: only members added to the selected project
+  const projectMembers: AuthUser[] = useMemo(() => {
+    // If no project is selected (General Task), allow all users
+    if (!selectedProjectId) {
+      return allUsers;
+    }
+
+    const currentProject = projects.find((p) => p.id === selectedProjectId);
+    if (!currentProject) {
+      return allUsers;
+    }
+
+    const memberIds = new Set<string>();
+    if (currentProject.manager?.id) {
+      memberIds.add(currentProject.manager.id);
+    }
+    currentProject.members?.forEach((m) => {
+      if (m.id) memberIds.add(m.id);
+    });
+
+    if (memberIds.size === 0) {
+      return [];
+    }
+
+    // Match users from allUsers
+    const matched = allUsers.filter((u) => memberIds.has(u.id));
+
+    // Also include any members from project.members not present in allUsers
+    const synthesized: AuthUser[] = (currentProject.members || [])
+      .filter((m) => !matched.some((u) => u.id === m.id))
+      .map((m) => ({
+        id: m.id,
+        fullName: m.name,
+        nickname: m.name.toLowerCase().replace(/\s+/g, ''),
+        email: m.email,
+        avatar: m.avatar || '/Avatar.jpg',
+        status: 'online' as const,
+        department: 'Engineering',
+        title: m.role || 'Member',
+        workspace: {
+          id: 'ws_nexaflow',
+          name: 'NexaFlow',
+          role: m.role || 'Member',
+          plan: 'Enterprise',
+        },
+      }));
+
+    return [...matched, ...synthesized];
+  }, [selectedProjectId, projects, allUsers]);
+
+  const handleProjectChange = (newProjectId: string) => {
+    setSelectedProjectId(newProjectId);
+    if (newProjectId) {
+      const currentProject = projects.find((p) => p.id === newProjectId);
+      if (currentProject) {
+        const memberIds = new Set<string>();
+        if (currentProject.manager?.id) memberIds.add(currentProject.manager.id);
+        currentProject.members?.forEach((m) => {
+          if (m.id) memberIds.add(m.id);
+        });
+        setSelectedUsers((prev) => prev.filter((u) => memberIds.has(u.id)));
+      }
+    }
+  };
+
   if (prevDefaultProjectId !== defaultProjectId) {
     setPrevDefaultProjectId(defaultProjectId);
     setSelectedProjectId(defaultProjectId);
+    if (defaultProjectId) {
+      const currentProject = projects.find((p) => p.id === defaultProjectId);
+      if (currentProject) {
+        const memberIds = new Set<string>();
+        if (currentProject.manager?.id) memberIds.add(currentProject.manager.id);
+        currentProject.members?.forEach((m) => {
+          if (m.id) memberIds.add(m.id);
+        });
+        const valid = selectedUsers.filter((u) => memberIds.has(u.id));
+        if (valid.length !== selectedUsers.length) {
+          setSelectedUsers(valid);
+        }
+      }
+    }
   }
 
   // Subtasks state & drag/reorder
@@ -168,9 +252,6 @@ export function AddTaskModal({
     setDragOverSubtaskIndex(null);
     setDragOverPosition(null);
   };
-
-  const { data: projects = [] } = useProjectsQuery();
-  const addTaskMutation = useAddTaskMutation();
 
   const todayKey = useMemo(() => getTodayDateString(), []);
 
@@ -468,6 +549,7 @@ export function AddTaskModal({
                 <AssigneeSelector
                   selectedUsers={selectedUsers}
                   onSelectUsers={setSelectedUsers}
+                  availableUsers={projectMembers}
                 />
               </div>
 
@@ -491,7 +573,7 @@ export function AddTaskModal({
               <ProjectSelector
                 projects={projects}
                 value={selectedProjectId}
-                onChange={setSelectedProjectId}
+                onChange={handleProjectChange}
               />
             </div>
 

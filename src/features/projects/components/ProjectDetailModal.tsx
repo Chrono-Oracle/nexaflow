@@ -48,6 +48,7 @@ import {
   useDeleteTaskMutation,
 } from '@/hooks/useDashboardData';
 import { FileIconBadge, FileUploadModal } from '@/components/ui/FileUpload';
+import { AddTaskModal } from '@/features/tasks/components/AddTaskModal';
 import { TaskAttachment, TaskStatus } from '@/features/tasks/types/task.types';
 import { cleanTrailingEmptyHtml } from '../utils/htmlSanitizer';
 import {
@@ -160,6 +161,7 @@ export function ProjectDetailModal({
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const addTaskInputRef = useRef<HTMLInputElement>(null);
+  const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
 
   // Edit task state
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -1221,14 +1223,17 @@ export function ProjectDetailModal({
                         </span>
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={() => setIsAddingTask(true)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary-medium/20 text-xs font-semibold text-primary-dark hover:bg-primary-surface/40 hover:border-primary-medium/30 transition-all cursor-pointer shadow-2xs"
-                      >
-                        <LuPlus className="w-3.5 h-3.5" />
-                        <span>Add Task</span>
-                      </button>
+                      {/* Add Task button on right: Only visible when at least one task exists */}
+                      {tasks.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setIsAddTaskModalOpen(true)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary-medium/20 text-xs font-semibold text-primary-dark hover:bg-primary-surface/40 hover:border-primary-medium/30 transition-all cursor-pointer shadow-2xs"
+                        >
+                          <LuPlus className="w-3.5 h-3.5" />
+                          <span>Add Task</span>
+                        </button>
+                      )}
                     </div>
 
                     {/* Inline Add Task Input Form */}
@@ -1282,7 +1287,7 @@ export function ProjectDetailModal({
                             </p>
                             <button
                               type="button"
-                              onClick={() => setIsAddingTask(true)}
+                              onClick={() => setIsAddTaskModalOpen(true)}
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-dark text-white text-xs font-semibold hover:bg-primary transition-colors cursor-pointer shadow-2xs"
                             >
                               <LuPlus className="w-3.5 h-3.5" />
@@ -1745,6 +1750,13 @@ export function ProjectDetailModal({
         onClose={() => setIsUploadModalOpen(false)}
         onAttachFiles={handleUploadComplete}
         initialAttachments={(project.attachments as TaskAttachment[]) || []}
+      />
+
+      {/* Add Task Modal Integration */}
+      <AddTaskModal
+        isOpen={isAddTaskModalOpen}
+        onClose={() => setIsAddTaskModalOpen(false)}
+        defaultProjectId={project?.id}
       />
     </>
   );
