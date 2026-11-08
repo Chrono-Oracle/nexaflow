@@ -439,6 +439,23 @@
       "title": "No teams created yet",
       "description": "Start building your team to collaborate on projects, assign tasks, and track workload capacity across your workspace.",
       "createTeam": "Create Team"
+    },
+    "createTeamModal": {
+      "title": "Create a new team",
+      "subtitle": "Change how NexaFlow looks and feels in your workspace.",
+      "teamName": "Team name",
+      "teamNamePlaceholder": "New Dashboard Ideation",
+      "appearance": "Appearance",
+      "customColor": "Custom color",
+      "members": "Members",
+      "searchPlaceholder": "Add members by name or email",
+      "youBadge": "You",
+      "invitePending": "Invite pending",
+      "resetToDefault": "Reset to default",
+      "cancel": "Cancel",
+      "createTeam": "Create team",
+      "teamCreatedSuccess": "Team created successfully!",
+      "nameRequired": "Please enter a team name"
     }
   }
 }

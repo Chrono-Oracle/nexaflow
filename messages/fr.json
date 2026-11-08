@@ -439,6 +439,23 @@
       "title": "Aucune équipe créée pour l'instant",
       "description": "Commencez à bâtir votre équipe pour collaborer sur des projets, attribuer des tâches et suivre la charge de travail.",
       "createTeam": "Créer une équipe"
+    },
+    "createTeamModal": {
+      "title": "Créer une nouvelle équipe",
+      "subtitle": "Personnalisez l'apparence et la collaboration dans votre espace NexaFlow.",
+      "teamName": "Nom de l'équipe",
+      "teamNamePlaceholder": "Nouvelle Idéation de Tableau de Bord",
+      "appearance": "Apparence",
+      "customColor": "Couleur personnalisée",
+      "members": "Membres",
+      "searchPlaceholder": "Ajouter des membres par nom ou e-mail",
+      "youBadge": "Vous",
+      "invitePending": "Invitation en attente",
+      "resetToDefault": "Rétablir par défaut",
+      "cancel": "Annuler",
+      "createTeam": "Créer l'équipe",
+      "teamCreatedSuccess": "Équipe créée avec succès !",
+      "nameRequired": "Veuillez saisir un nom d'équipe"
     }
   }
 }

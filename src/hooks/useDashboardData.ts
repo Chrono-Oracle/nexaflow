@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { storageApi, initClientStorage } from '@/lib/storage';
 import { Project } from '@/features/projects/types/project.types';
 import { Task, TaskStatus } from '@/features/tasks/types/task.types';
-import { TeamMember } from '@/features/team/types/team.types';
+import { TeamMember, Team } from '@/features/team/types/team.types';
 
 export const QUERY_KEYS = {
   PROJECTS: ['projects'] as const,
@@ -13,6 +13,7 @@ export const QUERY_KEYS = {
   TASKS: ['tasks'] as const,
   TASK: (id: string) => ['tasks', id] as const,
   TEAM: ['team'] as const,
+  TEAMS: ['teams'] as const,
   ACTIVITIES: ['activities'] as const,
   STATS: ['dashboardStats'] as const,
 };
@@ -29,6 +30,7 @@ export function useStorageSync() {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PROJECTS });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.TASKS });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.TEAM });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.TEAMS });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITIES });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.STATS });
     };
@@ -275,6 +277,44 @@ export function useDeleteTeamMemberMutation() {
     mutationFn: (id: string) => storageApi.deleteTeamMember(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.TEAM });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.STATS });
+    },
+  });
+}
+
+// ==========================================
+// TEAMS HOOKS
+// ==========================================
+export function useTeamsQuery() {
+  return useQuery({
+    queryKey: QUERY_KEYS.TEAMS,
+    queryFn: () => storageApi.getTeams(),
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useCreateTeamMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (newTeam: Omit<Team, 'id' | 'createdAt'>) => storageApi.createTeam(newTeam),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.TEAMS });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.TEAM });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITIES });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.STATS });
+    },
+  });
+}
+
+export function useDeleteTeamMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => storageApi.deleteTeam(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.TEAMS });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITIES });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.STATS });
     },
   });

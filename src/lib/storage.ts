@@ -8,7 +8,7 @@ import {
 import { currentUser } from '@/data/userDashboard';
 import { Project, ProjectActivity } from '@/features/projects/types/project.types';
 import { Task, TaskStatus } from '@/features/tasks/types/task.types';
-import { TeamMember } from '@/features/team/types/team.types';
+import { TeamMember, Team } from '@/features/team/types/team.types';
 import { ActivityItem } from '@/features/notifications/types/activity.types';
 import { DashboardStats } from '@/features/home/types/dashboard.types';
 
@@ -16,6 +16,7 @@ const STORAGE_KEYS = {
   PROJECTS: 'nexaflow_projects',
   TASKS: 'nexaflow_tasks',
   TEAM: 'nexaflow_team',
+  TEAMS: 'nexaflow_teams',
   ACTIVITIES: 'nexaflow_activities',
   INITIALIZED: 'nexaflow_initialized_v2',
 };
@@ -558,6 +559,79 @@ export const storageApi = {
   },
 
   // ==========================================
+  // TEAMS CRUD
+  // ==========================================
+  async getTeams(): Promise<Team[]> {
+    return getStoredItem<Team[]>(STORAGE_KEYS.TEAMS, []);
+  },
+
+  async getTeamById(id: string): Promise<Team | null> {
+    const teams = await storageApi.getTeams();
+    return teams.find((t) => t.id === id) || null;
+  },
+
+  async createTeam(data: Omit<Team, 'id' | 'createdAt'>): Promise<Team> {
+    const teams = await storageApi.getTeams();
+    const newTeam: Team = {
+      ...data,
+      id: `team_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      createdAt: new Date().toISOString(),
+    };
+
+    const updated = [newTeam, ...teams];
+    setStoredItem(STORAGE_KEYS.TEAMS, updated);
+
+    // Sync any newly added members into the team directory
+    const existingMembers = await storageApi.getTeam();
+    const existingIds = new Set(existingMembers.map((m) => m.id));
+    const toAdd: TeamMember[] = [];
+    for (const member of newTeam.members) {
+      if (!existingIds.has(member.id)) {
+        toAdd.push(member);
+        existingIds.add(member.id);
+      }
+    }
+    if (toAdd.length > 0) {
+      setStoredItem(STORAGE_KEYS.TEAM, [...existingMembers, ...toAdd]);
+    }
+
+    await storageApi.addActivity({
+      type: 'member_assigned',
+      title: 'Team created',
+      description: `Created new team "${newTeam.name}" with ${newTeam.members.length} members.`,
+      actorName: currentUser.fullName,
+      actorAvatar: currentUser.avatar,
+    });
+
+    return newTeam;
+  },
+
+  async updateTeam(id: string, updates: Partial<Omit<Team, 'id' | 'createdAt'>>): Promise<Team | null> {
+    const teams = await storageApi.getTeams();
+    const index = teams.findIndex((t) => t.id === id);
+    if (index === -1) return null;
+
+    const updatedTeam = {
+      ...teams[index],
+      ...updates,
+    };
+
+    teams[index] = updatedTeam;
+    setStoredItem(STORAGE_KEYS.TEAMS, teams);
+    return updatedTeam;
+  },
+
+  async deleteTeam(id: string): Promise<boolean> {
+    const teams = await storageApi.getTeams();
+    const target = teams.find((t) => t.id === id);
+    if (!target) return false;
+
+    const filtered = teams.filter((t) => t.id !== id);
+    setStoredItem(STORAGE_KEYS.TEAMS, filtered);
+    return true;
+  },
+
+  // ==========================================
   // ACTIVITIES
   // ==========================================
   async getActivities(): Promise<ActivityItem[]> {
@@ -602,6 +676,7 @@ export const storageApi = {
     setStoredItem(STORAGE_KEYS.TASKS, []);
     setStoredItem(STORAGE_KEYS.ACTIVITIES, []);
     setStoredItem(STORAGE_KEYS.TEAM, INITIAL_TEAM_MEMBERS);
+    setStoredItem(STORAGE_KEYS.TEAMS, []);
   },
 
   async resetDemoData(): Promise<void> {
@@ -614,6 +689,7 @@ export const storageApi = {
       projects: getStoredItem(STORAGE_KEYS.PROJECTS, []),
       tasks: getStoredItem(STORAGE_KEYS.TASKS, []),
       team: getStoredItem(STORAGE_KEYS.TEAM, INITIAL_TEAM_MEMBERS),
+      teams: getStoredItem(STORAGE_KEYS.TEAMS, []),
       activities: getStoredItem(STORAGE_KEYS.ACTIVITIES, []),
       exportedAt: new Date().toISOString(),
     }, null, 2);
@@ -626,6 +702,7 @@ export const storageApi = {
       if (Array.isArray(data.projects)) setStoredItem(STORAGE_KEYS.PROJECTS, data.projects);
       if (Array.isArray(data.tasks)) setStoredItem(STORAGE_KEYS.TASKS, data.tasks);
       if (Array.isArray(data.team)) setStoredItem(STORAGE_KEYS.TEAM, data.team);
+      if (Array.isArray(data.teams)) setStoredItem(STORAGE_KEYS.TEAMS, data.teams);
       if (Array.isArray(data.activities)) setStoredItem(STORAGE_KEYS.ACTIVITIES, data.activities);
       return true;
     } catch {

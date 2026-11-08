@@ -1,15 +1,17 @@
 'use client';
 
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { LuPlus } from 'react-icons/lu';
+import { useTeamsQuery } from '@/hooks/useDashboardData';
 import { TeamEmptyState } from '@/features/team/components/TeamEmptyState';
+import { CreateTeamModal } from '@/features/team/components/CreateTeamModal';
+import { TeamsGrid } from '@/features/team/components/TeamsGrid';
 
 export default function TeamPage() {
   const t = useTranslations('teamPage');
-
-  const handleCreateTeam = () => {
-    // Will be wired to Create Team modal in upcoming steps
-    console.log('Create team clicked');
-  };
+  const [isCreateTeamOpen, setIsCreateTeamOpen] = useState(false);
+  const { data: teams = [] } = useTeamsQuery();
 
   return (
     <div className="font-elms w-full space-y-6 pb-12">
@@ -27,11 +29,36 @@ export default function TeamPage() {
               {t('subtitle')}
             </p>
           </div>
+
+          {/* Create Team button in header appears once teams have been created */}
+          {teams.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setIsCreateTeamOpen(true)}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-primary-dark text-white text-xs sm:text-sm font-semibold shadow-xs hover:bg-primary transition-all duration-200 active:scale-95 cursor-pointer self-start sm:self-auto shrink-0"
+            >
+              <LuPlus className="w-4 h-4 stroke-[2.5]" />
+              <span>{t('createTeam')}</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Team Empty State with team.json animation and Create Team button */}
-      <TeamEmptyState onCreateTeam={handleCreateTeam} />
+      {/* When no teams exist, show TeamEmptyState; otherwise show TeamsGrid */}
+      {teams.length === 0 ? (
+        <TeamEmptyState onCreateTeam={() => setIsCreateTeamOpen(true)} />
+      ) : (
+        <TeamsGrid
+          teams={teams}
+          onCreateTeam={() => setIsCreateTeamOpen(true)}
+        />
+      )}
+
+      {/* Create Team Modal */}
+      <CreateTeamModal
+        isOpen={isCreateTeamOpen}
+        onClose={() => setIsCreateTeamOpen(false)}
+      />
     </div>
   );
 }
