@@ -151,14 +151,6 @@ export function MiniCalendarPicker({
     setNavMonthOffset((prev) => (prev === null ? 1 : prev + 1));
   };
 
-  const handleGoToday = () => {
-    const now = new Date();
-    const diffMonths =
-      (now.getFullYear() - baseDate.getFullYear()) * 12 +
-      (now.getMonth() - baseDate.getMonth());
-    setNavMonthOffset(diffMonths);
-  };
-
   // Month & Year label (e.g. "November 2026" or "novembre 2026")
   const monthYearLabel = useMemo(() => {
     const formatter = new Intl.DateTimeFormat(locale, {
@@ -261,19 +253,12 @@ export function MiniCalendarPicker({
             style={dropdownStyle}
             className="bg-white rounded-2xl p-3 border border-primary-medium/15 shadow-2xl font-elms animate-in fade-in zoom-in-95 duration-150 select-none"
           >
-            {/* Header Row: Month Year + Today + Nav Arrows */}
+            {/* Header Row: Month Year + Nav Arrows */}
             <div className="flex items-center justify-between mb-2.5 px-0.5">
               <div className="flex items-center gap-1.5 min-w-0">
                 <span className="text-xs sm:text-sm font-bold text-primary-dark tracking-tight truncate capitalize">
                   {monthYearLabel}
                 </span>
-                <button
-                  type="button"
-                  onClick={handleGoToday}
-                  className="text-[10px] font-semibold text-primary-medium/80 hover:text-primary-dark px-1.5 py-0.5 rounded-md hover:bg-primary-surface transition-colors cursor-pointer shrink-0"
-                >
-                  {t('today')}
-                </button>
               </div>
 
               <div className="flex items-center gap-1 shrink-0">

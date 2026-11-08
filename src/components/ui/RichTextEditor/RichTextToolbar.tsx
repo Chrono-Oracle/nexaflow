@@ -16,6 +16,7 @@ import {
   LuAlignCenter,
   LuAlignRight,
   LuChevronDown,
+  LuCheck,
 } from 'react-icons/lu';
 
 export interface ActiveFormats {
@@ -40,11 +41,10 @@ interface RichTextToolbarProps {
 }
 
 const FORMAT_BLOCK_OPTIONS = [
-  { labelKey: 'normalText', value: '<p>' },
-  { labelKey: 'heading1', value: '<h1>' },
-  { labelKey: 'heading2', value: '<h2>' },
-  { labelKey: 'heading3', value: '<h3>' },
-  { labelKey: 'codeBlock', value: '<pre>' },
+  { labelKey: 'normalText', value: 'p', defaultLabel: 'Normal text', previewClass: 'text-xs font-normal' },
+  { labelKey: 'heading1', value: 'h1', defaultLabel: 'Header 1', previewClass: 'text-base font-bold' },
+  { labelKey: 'heading2', value: 'h2', defaultLabel: 'Header 2', previewClass: 'text-sm font-bold' },
+  { labelKey: 'heading3', value: 'h3', defaultLabel: 'Header 3', previewClass: 'text-xs font-semibold' },
 ];
 
 export function RichTextToolbar({
@@ -80,10 +80,11 @@ export function RichTextToolbar({
     e.preventDefault();
   };
 
-  const currentBlock = FORMAT_BLOCK_OPTIONS.find((opt) =>
-    opt.value.toLowerCase().includes(activeFormats.formatBlock.toLowerCase())
-  );
-  const currentBlockLabel = currentBlock ? t(currentBlock.labelKey) : t('normalText');
+  const normalizedBlock = (activeFormats.formatBlock || 'p').replace(/[<>]/g, '').toLowerCase();
+  const currentBlock = FORMAT_BLOCK_OPTIONS.find((opt) => opt.value === normalizedBlock);
+  const currentBlockLabel = currentBlock
+    ? (t(currentBlock.labelKey) || currentBlock.defaultLabel)
+    : (t('normalText') || 'Normal text');
 
   const handleInsertLink = () => {
     const url = window.prompt(t('promptLinkUrl'));
@@ -104,8 +105,8 @@ export function RichTextToolbar({
   };
 
   return (
-    <div className="flex items-center gap-0.5 sm:gap-1 px-2.5 py-1.5 border-b border-primary-medium/10 bg-[#f4f2ec]/80 flex-nowrap overflow-x-auto no-scrollbar text-primary-dark/85 font-elms select-none">
-      {/* 1. Format Block Dropdown (Normal text, Heading 1, 2, 3, Code) */}
+    <div className="relative z-30 flex items-center gap-0.5 sm:gap-1 px-2.5 py-1.5 border-b border-primary-medium/10 bg-[#f4f2ec]/80 flex-wrap sm:flex-nowrap rounded-t-2xl text-primary-dark/85 font-elms select-none">
+      {/* 1. Format Block Dropdown (Normal text, Header 1, Header 2, Header 3) */}
       <div className="relative" ref={blockMenuRef}>
         <button
           type="button"
@@ -120,21 +121,31 @@ export function RichTextToolbar({
         </button>
 
         {showBlockMenu && (
-          <div className="absolute top-full left-0 mt-1 w-36 bg-white rounded-xl shadow-lg border border-primary-medium/15 py-1 z-30">
-            {FORMAT_BLOCK_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onMouseDown={handleToolbarButtonMouseDown}
-                onClick={() => {
-                  onExecuteCommand('formatBlock', opt.value);
-                  setShowBlockMenu(false);
-                }}
-                className="w-full text-left px-3 py-1.5 text-xs font-medium text-primary-dark hover:bg-primary-surface/40 transition-colors cursor-pointer block"
-              >
-                {t(opt.labelKey)}
-              </button>
-            ))}
+          <div className="absolute top-full left-0 mt-1 w-44 bg-white rounded-xl shadow-2xl border border-primary-medium/20 py-1.5 z-50 font-elms">
+            {FORMAT_BLOCK_OPTIONS.map((opt) => {
+              const isSelected = normalizedBlock === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onMouseDown={handleToolbarButtonMouseDown}
+                  onClick={() => {
+                    onExecuteCommand('formatBlock', opt.value);
+                    setShowBlockMenu(false);
+                  }}
+                  className={`w-full text-left px-3.5 py-2 flex items-center justify-between transition-colors cursor-pointer ${
+                    isSelected
+                      ? 'bg-primary-surface/50 text-primary-dark font-bold'
+                      : 'text-primary-dark/80 hover:bg-primary-surface/30'
+                  }`}
+                >
+                  <span className={opt.previewClass}>
+                    {t(opt.labelKey) || opt.defaultLabel}
+                  </span>
+                  {isSelected && <LuCheck className="w-3.5 h-3.5 text-primary-dark" />}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -164,7 +175,7 @@ export function RichTextToolbar({
             </button>
 
             {showAlignMenu && (
-              <div className="absolute top-full left-0 mt-1 w-28 bg-white rounded-xl shadow-lg border border-primary-medium/15 py-1 z-30 flex flex-col">
+              <div className="absolute top-full left-0 mt-1 w-36 bg-white rounded-xl shadow-2xl border border-primary-medium/20 py-1.5 z-50 flex flex-col font-elms">
                 <button
                   type="button"
                   onMouseDown={handleToolbarButtonMouseDown}
@@ -172,10 +183,19 @@ export function RichTextToolbar({
                     onExecuteCommand('justifyLeft');
                     setShowAlignMenu(false);
                   }}
-                  className="px-3 py-1.5 text-xs text-primary-dark hover:bg-primary-surface/40 flex items-center gap-2 cursor-pointer"
+                  className={`px-3 py-1.5 text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                    activeFormats.alignment === 'left'
+                      ? 'bg-primary-surface/50 text-primary-dark font-bold'
+                      : 'text-primary-dark/80 hover:bg-primary-surface/30'
+                  }`}
                 >
-                  <LuAlignLeft className="w-3.5 h-3.5" />
-                  <span>{t('left')}</span>
+                  <div className="flex items-center gap-2">
+                    <LuAlignLeft className="w-3.5 h-3.5" />
+                    <span>{t('left')}</span>
+                  </div>
+                  {activeFormats.alignment === 'left' && (
+                    <LuCheck className="w-3.5 h-3.5 text-primary-dark" />
+                  )}
                 </button>
                 <button
                   type="button"
@@ -184,10 +204,19 @@ export function RichTextToolbar({
                     onExecuteCommand('justifyCenter');
                     setShowAlignMenu(false);
                   }}
-                  className="px-3 py-1.5 text-xs text-primary-dark hover:bg-primary-surface/40 flex items-center gap-2 cursor-pointer"
+                  className={`px-3 py-1.5 text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                    activeFormats.alignment === 'center'
+                      ? 'bg-primary-surface/50 text-primary-dark font-bold'
+                      : 'text-primary-dark/80 hover:bg-primary-surface/30'
+                  }`}
                 >
-                  <LuAlignCenter className="w-3.5 h-3.5" />
-                  <span>{t('center')}</span>
+                  <div className="flex items-center gap-2">
+                    <LuAlignCenter className="w-3.5 h-3.5" />
+                    <span>{t('center')}</span>
+                  </div>
+                  {activeFormats.alignment === 'center' && (
+                    <LuCheck className="w-3.5 h-3.5 text-primary-dark" />
+                  )}
                 </button>
                 <button
                   type="button"
@@ -196,10 +225,19 @@ export function RichTextToolbar({
                     onExecuteCommand('justifyRight');
                     setShowAlignMenu(false);
                   }}
-                  className="px-3 py-1.5 text-xs text-primary-dark hover:bg-primary-surface/40 flex items-center gap-2 cursor-pointer"
+                  className={`px-3 py-1.5 text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                    activeFormats.alignment === 'right'
+                      ? 'bg-primary-surface/50 text-primary-dark font-bold'
+                      : 'text-primary-dark/80 hover:bg-primary-surface/30'
+                  }`}
                 >
-                  <LuAlignRight className="w-3.5 h-3.5" />
-                  <span>{t('right')}</span>
+                  <div className="flex items-center gap-2">
+                    <LuAlignRight className="w-3.5 h-3.5" />
+                    <span>{t('right')}</span>
+                  </div>
+                  {activeFormats.alignment === 'right' && (
+                    <LuCheck className="w-3.5 h-3.5 text-primary-dark" />
+                  )}
                 </button>
               </div>
             )}

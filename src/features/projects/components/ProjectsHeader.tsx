@@ -61,12 +61,12 @@ export function ProjectsHeader({
     >
       {/* Main Top Header Bar matching reference UI */}
       <div className="flex items-center justify-between gap-4">
-        {/* Left: Total Projects (XX) */}
+        {/* Left: Total Projects (0 when zero, 01, 02... from 1) */}
         <div className="flex items-center gap-2 select-none">
           <h1 className="text-base sm:text-lg font-bold text-primary-dark tracking-tight">
             <span>{t('totalProjects')}</span>{' '}
             <span className="font-bold text-primary-dark">
-              ({String(totalProjects).padStart(2, '0')})
+              ({totalProjects === 0 ? '0' : String(totalProjects).padStart(2, '0')})
             </span>
           </h1>
         </div>

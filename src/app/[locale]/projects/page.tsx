@@ -1,18 +1,14 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useTranslations } from 'next-intl';
 import { useProjectsQuery } from '@/hooks/useDashboardData';
 import { ProjectsHeader } from '@/features/projects/components/ProjectsHeader';
-import { ProjectCard } from '@/features/projects/components/ProjectCard';
+import { ProjectsTable } from '@/features/projects/components/ProjectsTable';
 import { CreateProjectModal } from '@/features/projects/components/CreateProjectModal';
-import { ProjectsEmptyState } from '@/features/home/components/ProjectsEmptyState';
+import { ProjectDetailModal } from '@/features/projects/components/ProjectDetailModal';
 import { ProjectStatus, ProjectPriority } from '@/features/projects/types/project.types';
 
 export default function ProjectsPage() {
-  const t = useTranslations('projectsPage');
-  const tOverview = useTranslations('projectOverview');
-
   const { data: projects = [] } = useProjectsQuery();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -20,6 +16,12 @@ export default function ProjectsPage() {
   const [priorityFilter, setPriorityFilter] = useState<ProjectPriority | 'All'>('All');
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+
+  const selectedProject = useMemo(
+    () => projects.find((p) => p.id === selectedProjectId) || null,
+    [projects, selectedProjectId]
+  );
 
   // Filtered projects
   const filteredProjects = useMemo(() => {
@@ -84,54 +86,26 @@ export default function ProjectsPage() {
         activeFilterCount={activeFilterCount}
       />
 
-      {/* Main Projects Content Area */}
-      <div>
-        {projects.length === 0 ? (
-          /* Render Empty State when no project exists */
-          <div className="bg-white rounded-2xl p-8 border border-primary-medium/15 shadow-xs">
-            <ProjectsEmptyState
-              title={tOverview('emptyTitle')}
-              description={tOverview('emptyDesc')}
-              onAction={() => setIsCreateModalOpen(true)}
-              actionLabel={t('newProject')}
-            />
-          </div>
-        ) : filteredProjects.length === 0 ? (
-          /* When filters yield no match */
-          <div className="bg-white rounded-2xl p-12 border border-primary-medium/15 shadow-xs text-center space-y-3">
-            <h3 className="text-base font-bold text-primary-dark">
-              {t('noProjectsFound')}
-            </h3>
-            <p className="text-xs text-primary-medium/70 max-w-md mx-auto">
-              {t('noProjectsFoundDesc')}
-            </p>
-            {activeFilterCount > 0 && (
-              <button
-                type="button"
-                onClick={handleResetFilters}
-                className="mt-2 inline-flex items-center justify-center px-4 py-2 rounded-md bg-primary-dark text-white text-xs font-medium shadow-xs hover:bg-primary transition-all cursor-pointer"
-              >
-                {t('resetFilters')}
-              </button>
-            )}
-          </div>
-        ) : (
-          /* Project Cards Grid */
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredProjects.map((project) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Main Projects Table / Empty State Container */}
+      <ProjectsTable
+        projects={filteredProjects}
+        totalProjectsCount={projects.length}
+        onNewProject={() => setIsCreateModalOpen(true)}
+        onResetFilters={handleResetFilters}
+        onProjectClick={(project) => setSelectedProjectId(project.id)}
+      />
 
       {/* Create Project Modal */}
       <CreateProjectModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
+      />
+
+      {/* Project Detail Modal matching reference design */}
+      <ProjectDetailModal
+        project={selectedProject}
+        isOpen={!!selectedProjectId}
+        onClose={() => setSelectedProjectId(null)}
       />
     </div>
   );

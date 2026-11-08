@@ -1,7 +1,8 @@
 'use client';
 
+import { useState, useMemo } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { Link, useRouter } from '@/i18n/routing';
+import { Link } from '@/i18n/routing';
 import { LuCalendar, LuChevronRight } from 'react-icons/lu';
 import { useProjectsQuery } from '@/hooks/useDashboardData';
 import {
@@ -9,14 +10,20 @@ import {
   getProjectPriorityStyle,
 } from '@/features/projects/utils/badgeStyles';
 import { ProjectsEmptyState } from './ProjectsEmptyState';
+import { ProjectDetailModal } from '@/features/projects/components/ProjectDetailModal';
 
 export function ProjectsOverviewWidget() {
   const t = useTranslations('projectOverview');
   const locale = useLocale();
-  const router = useRouter();
 
   // Read live projects from local storage state
   const { data: projects = [] } = useProjectsQuery();
+
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const selectedProject = useMemo(
+    () => projects.find((p) => p.id === selectedProjectId) || null,
+    [projects, selectedProjectId]
+  );
 
   // Helper to format deadline dates nicely (e.g. "Apr 22" or "22 avr.")
   const formatDeadline = (dateStr: string) => {
@@ -95,7 +102,7 @@ export function ProjectsOverviewWidget() {
                 return (
                   <tr
                     key={project.id}
-                    onClick={() => router.push('/projects')}
+                    onClick={() => setSelectedProjectId(project.id)}
                     className="hover:bg-primary-surface/40 transition-colors group cursor-pointer"
                   >
                     {/* 1. Project Name & Subtitle */}
@@ -167,6 +174,13 @@ export function ProjectsOverviewWidget() {
           </table>
         </div>
       )}
+
+      {/* Project Detail Modal */}
+      <ProjectDetailModal
+        project={selectedProject}
+        isOpen={!!selectedProjectId}
+        onClose={() => setSelectedProjectId(null)}
+      />
     </div>
   );
 }
