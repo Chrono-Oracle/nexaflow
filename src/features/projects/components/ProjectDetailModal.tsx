@@ -35,6 +35,7 @@ import {
   ProjectComment,
   ProjectActivity,
   ProjectAttachment,
+  ProjectAssignedMember,
 } from '../types/project.types';
 import { getCurrentUser } from '@/data/users';
 import { useUpdateProjectMutation, useDeleteProjectMutation } from '@/hooks/useDashboardData';
@@ -62,6 +63,36 @@ const ALL_PRIORITIES: ProjectPriority[] = [
   'High',
   'Urgent',
 ];
+
+function getStatusBadgeStyle(status: ProjectStatus): { bg: string; text: string; border: string } {
+  switch (status) {
+    case 'In Progress':
+      return { bg: 'bg-[#fffbeb]', text: 'text-[#d97706]', border: 'border-[#fef3c7]' };
+    case 'Completed':
+      return { bg: 'bg-[#ecfdf5]', text: 'text-[#059669]', border: 'border-[#a7f3d0]' };
+    case 'At Risk':
+      return { bg: 'bg-[#fef2f2]', text: 'text-[#dc2626]', border: 'border-[#fecaca]' };
+    case 'In Review':
+      return { bg: 'bg-[#eff6ff]', text: 'text-[#2563eb]', border: 'border-[#bfdbfe]' };
+    case 'Pending':
+    default:
+      return { bg: 'bg-[#f8fafc]', text: 'text-[#64748b]', border: 'border-[#e2e8f0]' };
+  }
+}
+
+function getPriorityBadgeStyle(priority: ProjectPriority): { bg: string; text: string; border: string } {
+  switch (priority) {
+    case 'Urgent':
+      return { bg: 'bg-[#fef2f2]', text: 'text-[#dc2626]', border: 'border-[#fecaca]' };
+    case 'High':
+      return { bg: 'bg-[#fffbeb]', text: 'text-[#d97706]', border: 'border-[#fef3c7]' };
+    case 'Medium':
+      return { bg: 'bg-[#eff6ff]', text: 'text-[#2563eb]', border: 'border-[#bfdbfe]' };
+    case 'Low':
+    default:
+      return { bg: 'bg-[#ecfdf5]', text: 'text-[#059669]', border: 'border-[#a7f3d0]' };
+  }
+}
 
 function formatDetailDate(dateStr?: string, locale: string = 'en'): string {
   if (!dateStr) return '—';
@@ -139,6 +170,23 @@ export function ProjectDetailModal({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
 
+  // Description expand/collapse state with read more blur
+  const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
+  const isDescriptionExpanded = expandedProjectId === project?.id;
+  const setIsDescriptionExpanded = (expanded: boolean) => {
+    setExpandedProjectId(expanded ? (project?.id || null) : null);
+  };
+
+  const [canExpand, setCanExpand] = useState(false);
+  const descriptionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = descriptionRef.current;
+    if (el) {
+      setCanExpand(el.scrollHeight > 96);
+    }
+  }, [project?.description]);
+
   // Close with Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -169,19 +217,10 @@ export function ProjectDetailModal({
     }
   }, [isAddingSubtask]);
 
-  // Resolve default subtasks matching uploaded UI if project has none yet
+  // Subtasks list directly from saved project data
   const subtasks: ProjectSubtask[] = useMemo(() => {
-    if (project?.subtasks && project.subtasks.length > 0) {
-      return project.subtasks;
-    }
-    return [
-      { id: 'sub_1', title: 'Pagination', completed: false },
-      { id: 'sub_2', title: 'Avatar', completed: false },
-      { id: 'sub_3', title: 'Accordion', completed: true },
-      { id: 'sub_4', title: 'Text Field', completed: false },
-      { id: 'sub_5', title: 'Button', completed: true },
-    ];
-  }, [project]);
+    return project?.subtasks || [];
+  }, [project?.subtasks]);
 
   const completedSubtasksCount = subtasks.filter((s) => s.completed).length;
   const totalSubtasksCount = subtasks.length;
@@ -190,80 +229,42 @@ export function ProjectDetailModal({
       ? Math.round((completedSubtasksCount / totalSubtasksCount) * 100)
       : project?.progress || 0;
 
-  // Resolve activities matching uploaded UI if project has none yet
+  // Activities list directly from saved project data, or real project creation event
   const activities: ProjectActivity[] = useMemo(() => {
     if (project?.activities && project.activities.length > 0) {
       return project.activities;
     }
-    const projName = project?.name || 'Design System';
-    return [
-      {
-        id: 'act_1',
-        actorName: 'Dea Ananda',
-        actorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face',
-        action: 'checklist subtask',
-        timestamp: 'Jan 8, 2024 at 10:30 AM',
-        badge: {
-          type: 'check',
-          label: 'Accordion',
+    if (project) {
+      return [
+        {
+          id: `act_${project.id}`,
+          actorName: project.manager?.name || currentUser.fullName,
+          actorAvatar: project.manager?.avatar || currentUser.avatar,
+          action: 'created project',
+          target: project.name,
+          timestamp: formatDetailDate(project.createdAt || project.startDate, locale),
+          badge: {
+            type: 'create',
+          },
         },
-      },
-      {
-        id: 'act_2',
-        actorName: 'Rahmadini',
-        actorAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face',
-        action: 'moved task card',
-        target: projName,
-        timestamp: 'Jan 8, 2024 at 09:00 AM',
-        badge: {
-          type: 'status_change',
-          from: 'To Do',
-          to: 'In Progress',
-        },
-      },
-      {
-        id: 'act_3',
-        actorName: 'Rahmadini',
-        actorAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face',
-        action: 'created task',
-        target: projName,
-        timestamp: 'Jan 7, 2024 at 02:00 PM',
-        badge: {
-          type: 'create',
-        },
-      },
-    ];
-  }, [project]);
-
-  // Assigned members list
-  const assignedMembers = useMemo(() => {
-    if (project?.members && project.members.length > 0) {
-      return project.members;
+      ];
     }
-    return [
-      {
-        id: 'mem_1',
-        name: 'Dea Ananda',
-        email: 'dea@nexaflow.io',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face',
-        role: 'Members' as const,
-      },
-      {
-        id: 'mem_2',
-        name: 'Akmal Nasrulloh',
-        email: 'akmal@nexaflow.io',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-        role: 'Members' as const,
-      },
-      {
-        id: 'mem_3',
-        name: 'Aldiyyy',
-        email: 'aldi@nexaflow.io',
-        avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face',
-        role: 'Members' as const,
-      },
-    ];
-  }, [project]);
+    return [];
+  }, [project, currentUser.fullName, currentUser.avatar, locale]);
+
+  // Assigned members list directly from saved project data
+  const assignedMembers: ProjectAssignedMember[] = useMemo(() => {
+    return project?.members || [];
+  }, [project?.members]);
+
+  // Split assigned members into Manager and Member groups
+  const managers = useMemo(() => {
+    return assignedMembers.filter((m) => m.role === 'Manager' || m.role === 'Owner');
+  }, [assignedMembers]);
+
+  const regularMembers = useMemo(() => {
+    return assignedMembers.filter((m) => m.role === 'Member' || m.role === 'Members' || !m.role);
+  }, [assignedMembers]);
 
   if (!isOpen || !project) return null;
 
@@ -510,7 +511,7 @@ export function ProjectDetailModal({
                 title="Active viewers"
               >
                 <LuEye className="w-3.5 h-3.5 text-primary-medium/70" />
-                <span>{project.viewsCount ?? 6}</span>
+                <span>{project.viewsCount ?? 1}</span>
               </div>
 
               {/* More Actions Dropdown */}
@@ -586,7 +587,7 @@ export function ProjectDetailModal({
             {/* --------------------------------------------------------------- */}
             {/* LEFT COLUMN: TITLE, DESCRIPTION, METADATA, TABS                 */}
             {/* --------------------------------------------------------------- */}
-            <div className="md:col-span-7 lg:col-span-8 flex flex-col overflow-y-auto custom-scrollbar px-6 sm:px-8 py-6 space-y-6">
+            <div className="md:col-span-7 lg:col-span-8 flex flex-col overflow-y-auto custom-scrollbar px-6 sm:px-8 py-5 space-y-4">
               {/* 1. Project Title */}
               <div>
                 {isEditingTitle ? (
@@ -632,15 +633,58 @@ export function ProjectDetailModal({
                   </div>
                 )}
 
-                {/* Subtitle / Description */}
-                <p className="text-xs sm:text-sm text-primary-medium/80 mt-2 leading-relaxed max-w-2xl">
-                  {project.description ||
-                    'The design system in the web version currently needs improvement and includes the addition of several other components.'}
-                </p>
+                {/* Subtitle / Description with Expand / Minimise & Bottom Blur Fade */}
+                {project.description ? (
+                  <div className="relative mt-2">
+                    <div
+                      ref={descriptionRef}
+                      className={`rich-text-editor-content text-xs sm:text-sm text-primary-dark/85 leading-relaxed max-w-2xl font-normal transition-all duration-300 ease-in-out ${
+                        !isDescriptionExpanded && canExpand
+                          ? 'max-h-24 overflow-hidden select-none'
+                          : 'max-h-none'
+                      }`}
+                      dangerouslySetInnerHTML={{ __html: project.description }}
+                    />
+
+                    {/* Bottom Read More Blur / Fade Overlay with Dropdown Arrow */}
+                    {!isDescriptionExpanded && canExpand && (
+                      <div className="absolute -bottom-1 left-0 right-0 h-14 bg-gradient-to-t from-white via-white/85 to-transparent flex items-end justify-center pointer-events-none pb-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setIsDescriptionExpanded(true)}
+                          className="pointer-events-auto p-1 rounded-full text-primary-dark/75 hover:text-primary-dark bg-white/95 hover:bg-white border border-primary-medium/20 shadow-xs hover:shadow-sm transition-all cursor-pointer hover:scale-105 active:scale-95"
+                          title="Read more"
+                          aria-label="Expand description"
+                        >
+                          <LuChevronDown className="w-4 h-4 text-primary-dark" />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Minimise Arrow Button when Expanded */}
+                    {isDescriptionExpanded && canExpand && (
+                      <div className="flex justify-center pt-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setIsDescriptionExpanded(false)}
+                          className="p-1 rounded-full text-primary-medium/70 hover:text-primary-dark hover:bg-primary-surface/40 transition-colors cursor-pointer"
+                          title="Minimise description"
+                          aria-label="Minimise description"
+                        >
+                          <LuChevronDown className="w-4 h-4 rotate-180 text-primary-dark" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs sm:text-sm text-primary-medium/50 italic mt-1.5">
+                    No description provided.
+                  </p>
+                )}
               </div>
 
               {/* 2. Metadata Key-Value List matching uploaded UI */}
-              <div className="space-y-3 py-2 text-xs select-none">
+              <div className="space-y-2.5 pt-0.5 text-xs select-none">
                 {/* Status Row */}
                 <div className="flex items-center">
                   <span className="w-28 sm:w-32 text-primary-medium/60 font-medium">
@@ -650,10 +694,14 @@ export function ProjectDetailModal({
                     <button
                       type="button"
                       onClick={() => setIsStatusMenuOpen((prev) => !prev)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg font-medium text-xs bg-[#fffbeb] text-[#d97706] border border-[#fef3c7] hover:opacity-90 transition-opacity cursor-pointer"
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg font-medium text-xs border transition-opacity cursor-pointer ${
+                        getStatusBadgeStyle(project.status).bg
+                      } ${getStatusBadgeStyle(project.status).text} ${
+                        getStatusBadgeStyle(project.status).border
+                      } hover:opacity-90`}
                     >
                       <span>{project.status}</span>
-                      <LuChevronDown className="w-3 h-3 text-[#d97706]/70" />
+                      <LuChevronDown className="w-3 h-3 opacity-70" />
                     </button>
                     {isStatusMenuOpen && (
                       <div className="absolute left-0 top-full mt-1.5 w-36 bg-white rounded-xl shadow-xl border border-primary-medium/15 py-1 z-30">
@@ -682,31 +730,79 @@ export function ProjectDetailModal({
                   </div>
                 </div>
 
-                {/* Assigned To Row with Avatars + Names */}
-                <div className="flex items-center">
-                  <span className="w-28 sm:w-32 text-primary-medium/60 font-medium">
+                {/* Assigned To Row - Split by Roles: Manager and Member */}
+                <div className="flex items-start">
+                  <span className="w-28 sm:w-32 text-primary-medium/60 font-medium pt-1">
                     {t('assignedTo')}
                   </span>
-                  <div className="flex items-center flex-wrap gap-3">
-                    {assignedMembers.map((member) => (
-                      <div
-                        key={member.id}
-                        className="inline-flex items-center gap-1.5"
-                      >
-                        <div className="relative w-5 h-5 rounded-full overflow-hidden shrink-0 border border-primary-medium/15">
-                          <Image
-                            src={member.avatar || '/Avatar.jpg'}
-                            alt={member.name}
-                            fill
-                            className="object-cover"
-                            sizes="20px"
-                          />
-                        </div>
-                        <span className="text-xs font-semibold text-primary-dark">
-                          {member.name}
-                        </span>
-                      </div>
-                    ))}
+                  <div className="flex-1 space-y-2 min-w-0">
+                    {assignedMembers.length === 0 ? (
+                      <span className="text-xs text-primary-medium/50 italic pt-1 inline-block">
+                        No members assigned
+                      </span>
+                    ) : (
+                      <>
+                        {/* Manager Group */}
+                        {managers.length > 0 && (
+                          <div className="flex items-center flex-wrap gap-2">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-bold bg-[#f5efe6] text-primary-dark border border-primary-medium/20 tracking-wide shrink-0">
+                              Manager
+                            </span>
+                            <div className="flex items-center flex-wrap gap-2.5">
+                              {managers.map((member) => (
+                                <div
+                                  key={member.id}
+                                  className="inline-flex items-center gap-1.5"
+                                >
+                                  <div className="relative w-5 h-5 rounded-full overflow-hidden shrink-0 border border-primary-medium/15">
+                                    <Image
+                                      src={member.avatar || '/Avatar.jpg'}
+                                      alt={member.name}
+                                      fill
+                                      className="object-cover"
+                                      sizes="20px"
+                                    />
+                                  </div>
+                                  <span className="text-xs font-semibold text-primary-dark">
+                                    {member.name}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Member Group */}
+                        {regularMembers.length > 0 && (
+                          <div className="flex items-center flex-wrap gap-2">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-bold bg-primary-surface/50 text-primary-medium/80 border border-primary-medium/15 tracking-wide shrink-0">
+                              Member
+                            </span>
+                            <div className="flex items-center flex-wrap gap-2.5">
+                              {regularMembers.map((member) => (
+                                <div
+                                  key={member.id}
+                                  className="inline-flex items-center gap-1.5"
+                                >
+                                  <div className="relative w-5 h-5 rounded-full overflow-hidden shrink-0 border border-primary-medium/15">
+                                    <Image
+                                      src={member.avatar || '/Avatar.jpg'}
+                                      alt={member.name}
+                                      fill
+                                      className="object-cover"
+                                      sizes="20px"
+                                    />
+                                  </div>
+                                  <span className="text-xs font-semibold text-primary-dark">
+                                    {member.name}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -739,11 +835,15 @@ export function ProjectDetailModal({
                     <button
                       type="button"
                       onClick={() => setIsPriorityMenuOpen((prev) => !prev)}
-                      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md font-semibold text-xs bg-[#ecfdf5] text-[#10b981] border border-[#d1fae5] hover:opacity-90 transition-opacity cursor-pointer"
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md font-semibold text-xs border transition-opacity cursor-pointer ${
+                        getPriorityBadgeStyle(project.priority || 'Low').bg
+                      } ${getPriorityBadgeStyle(project.priority || 'Low').text} ${
+                        getPriorityBadgeStyle(project.priority || 'Low').border
+                      } hover:opacity-90`}
                     >
                       <span className="text-xs font-bold leading-none">+</span>
                       <span>{project.priority || 'Low'}</span>
-                      <LuChevronDown className="w-3 h-3 text-[#10b981]/70 ml-0.5" />
+                      <LuChevronDown className="w-3 h-3 opacity-70 ml-0.5" />
                     </button>
                     {isPriorityMenuOpen && (
                       <div className="absolute left-0 top-full mt-1.5 w-32 bg-white rounded-xl shadow-xl border border-primary-medium/15 py-1 z-30">
@@ -787,10 +887,7 @@ export function ProjectDetailModal({
                   >
                     <span>{t('tabs.subtask')}</span>
                     {activeTab === 'subtask' && (
-                      <motion.div
-                        layoutId="activeTabUnderline"
-                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-dark rounded-full"
-                      />
+                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-dark rounded-full" />
                     )}
                   </button>
 
@@ -805,10 +902,7 @@ export function ProjectDetailModal({
                   >
                     <span>{t('tabs.attachment')}</span>
                     {activeTab === 'attachment' && (
-                      <motion.div
-                        layoutId="activeTabUnderline"
-                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-dark rounded-full"
-                      />
+                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-dark rounded-full" />
                     )}
                   </button>
 
@@ -823,10 +917,7 @@ export function ProjectDetailModal({
                   >
                     <span>{t('tabs.comments')}</span>
                     {activeTab === 'comments' && (
-                      <motion.div
-                        layoutId="activeTabUnderline"
-                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-dark rounded-full"
-                      />
+                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-dark rounded-full" />
                     )}
                   </button>
                 </div>
@@ -906,8 +997,24 @@ export function ProjectDetailModal({
                     {!isSubtaskCollapsed && (
                       <div className="space-y-1">
                         {subtasks.length === 0 ? (
-                          <div className="py-8 text-center text-xs text-primary-medium/60">
-                            {t('noSubtasks')}
+                          <div className="py-10 flex flex-col items-center justify-center text-center">
+                            <div className="w-10 h-10 rounded-full bg-primary-surface/50 flex items-center justify-center text-primary-medium/60 mb-2.5">
+                              <LuCheck className="w-4 h-4" />
+                            </div>
+                            <p className="text-xs font-semibold text-primary-dark mb-1">
+                              {t('noSubtasks') || 'No subtasks yet'}
+                            </p>
+                            <p className="text-[11px] text-primary-medium/60 max-w-xs mb-3">
+                              Break down this project into smaller checklist tasks and track completion progress.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => setIsAddingSubtask(true)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-dark text-white text-xs font-semibold hover:bg-primary transition-colors cursor-pointer shadow-2xs"
+                            >
+                              <LuPlus className="w-3.5 h-3.5" />
+                              <span>{t('addSubtask')}</span>
+                            </button>
                           </div>
                         ) : (
                           subtasks.map((item) => {
@@ -1316,15 +1423,15 @@ export function ProjectDetailModal({
                 <div className="flex items-center gap-2">
                   <div className="relative w-6 h-6 rounded-full overflow-hidden shrink-0 border border-primary-medium/15">
                     <Image
-                      src={project.manager?.avatar || '/Avatar.jpg'}
-                      alt={project.manager?.name || 'Creator'}
+                      src={project.manager?.avatar || currentUser.avatar || '/Avatar.jpg'}
+                      alt={project.manager?.name || currentUser.fullName}
                       fill
                       className="object-cover"
                       sizes="24px"
                     />
                   </div>
                   <span className="text-xs font-bold text-primary-dark">
-                    {project.manager?.name || 'Rahmadini'}
+                    {project.manager?.name || currentUser.fullName}
                   </span>
                 </div>
               </div>

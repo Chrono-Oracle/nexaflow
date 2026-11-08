@@ -1205,10 +1205,7 @@ export function TaskDetailView({
                 >
                   <span>{t('taskDetail.subtasks')}</span>
                   {effectiveTab === 'subtasks' && (
-                    <motion.div
-                      layoutId="detailTabIndicator"
-                      className="absolute -bottom-[9px] left-0 right-0 h-0.5 bg-primary-dark rounded-full"
-                    />
+                    <span className="absolute -bottom-[9px] left-0 right-0 h-0.5 bg-primary-dark rounded-full" />
                   )}
                 </button>
 
@@ -1230,10 +1227,7 @@ export function TaskDetailView({
                       </span>
                     )}
                     {effectiveTab === 'comments' && (
-                      <motion.div
-                        layoutId="detailTabIndicator"
-                        className="absolute -bottom-[9px] left-0 right-0 h-0.5 bg-primary-dark rounded-full"
-                      />
+                      <span className="absolute -bottom-[9px] left-0 right-0 h-0.5 bg-primary-dark rounded-full" />
                     )}
                   </button>
                 )}
@@ -1250,10 +1244,7 @@ export function TaskDetailView({
                 >
                   <span>{t('taskDetail.activities')}</span>
                   {effectiveTab === 'activities' && (
-                    <motion.div
-                      layoutId="detailTabIndicator"
-                      className="absolute -bottom-[9px] left-0 right-0 h-0.5 bg-primary-dark rounded-full"
-                    />
+                    <span className="absolute -bottom-[9px] left-0 right-0 h-0.5 bg-primary-dark rounded-full" />
                   )}
                 </button>
               </div>

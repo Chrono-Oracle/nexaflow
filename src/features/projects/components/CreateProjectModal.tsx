@@ -185,6 +185,18 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
       const primaryOwner =
         assignedMembers.find((m) => m.role === 'Owner') || defaultOwner;
 
+      const initialActivity = {
+        id: `act_${Date.now()}`,
+        actorName: primaryOwner.name,
+        actorAvatar: primaryOwner.avatar,
+        action: 'created project',
+        target: name.trim(),
+        timestamp: 'Just now',
+        badge: {
+          type: 'create' as const,
+        },
+      };
+
       await addProjectMutation.mutateAsync({
         name: name.trim(),
         description: description.trim(),
@@ -203,6 +215,8 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
           size: a.size,
           formattedSize: a.formattedSize,
           type: a.type,
+          url: a.url,
+          uploadedAt: a.uploadedAt,
         })),
         manager: {
           id: primaryOwner.id,
@@ -212,6 +226,11 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
           role: primaryOwner.role,
           department: 'Operations',
         },
+        subtasks: [],
+        comments: [],
+        activities: [initialActivity],
+        reminderActive: true,
+        viewsCount: 1,
       });
 
       toast.success(t('success'));

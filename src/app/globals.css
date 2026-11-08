@@ -109,6 +109,14 @@ body {
   word-break: break-word;
 }
 
+.rich-text-editor-content > *:last-child,
+.rich-text-editor-content ol:last-child,
+.rich-text-editor-content ul:last-child,
+.rich-text-editor-content p:last-child,
+.rich-text-editor-content div:last-child {
+  margin-bottom: 0 !important;
+}
+
 .rich-text-editor-content p,
 .rich-text-editor-content div {
   margin-top: 0.25rem;
