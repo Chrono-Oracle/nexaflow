@@ -27,6 +27,7 @@ import {
   ProjectMemberRole,
   ProjectAssignedMember,
 } from '../types/project.types';
+import { cleanTrailingEmptyHtml } from '../utils/htmlSanitizer';
 
 interface CreateProjectModalProps {
   isOpen: boolean;
@@ -199,7 +200,7 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
 
       await addProjectMutation.mutateAsync({
         name: name.trim(),
-        description: description.trim(),
+        description: cleanTrailingEmptyHtml(description),
         startDate,
         deadline: dueDate,
         status: 'In Progress',

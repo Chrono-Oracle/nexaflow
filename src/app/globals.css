@@ -109,11 +109,17 @@ body {
   word-break: break-word;
 }
 
+.rich-text-editor-content > *:first-child {
+  margin-top: 0 !important;
+}
+
 .rich-text-editor-content > *:last-child,
 .rich-text-editor-content ol:last-child,
 .rich-text-editor-content ul:last-child,
 .rich-text-editor-content p:last-child,
-.rich-text-editor-content div:last-child {
+.rich-text-editor-content div:last-child,
+.rich-text-editor-content ol > li:last-child,
+.rich-text-editor-content ul > li:last-child {
   margin-bottom: 0 !important;
 }
 

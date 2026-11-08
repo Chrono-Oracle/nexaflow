@@ -41,6 +41,7 @@ import { getCurrentUser } from '@/data/users';
 import { useUpdateProjectMutation, useDeleteProjectMutation } from '@/hooks/useDashboardData';
 import { FileIconBadge, FileUploadModal } from '@/components/ui/FileUpload';
 import { TaskAttachment } from '@/components/ui/FileUpload/fileUpload.types';
+import { cleanTrailingEmptyHtml } from '../utils/htmlSanitizer';
 
 interface ProjectDetailModalProps {
   project: Project | null;
@@ -170,6 +171,11 @@ export function ProjectDetailModal({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
 
+  // Clean description removing empty trailing tags/breaks
+  const cleanedDescription = useMemo(() => {
+    return cleanTrailingEmptyHtml(project?.description || '');
+  }, [project?.description]);
+
   // Description expand/collapse state with read more blur
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
   const isDescriptionExpanded = expandedProjectId === project?.id;
@@ -185,7 +191,7 @@ export function ProjectDetailModal({
     if (el) {
       setCanExpand(el.scrollHeight > 96);
     }
-  }, [project?.description]);
+  }, [cleanedDescription]);
 
   // Close with Escape key
   useEffect(() => {
@@ -587,7 +593,7 @@ export function ProjectDetailModal({
             {/* --------------------------------------------------------------- */}
             {/* LEFT COLUMN: TITLE, DESCRIPTION, METADATA, TABS                 */}
             {/* --------------------------------------------------------------- */}
-            <div className="md:col-span-7 lg:col-span-8 flex flex-col overflow-y-auto custom-scrollbar px-6 sm:px-8 py-5 space-y-4">
+            <div className="md:col-span-7 lg:col-span-8 flex flex-col overflow-y-auto custom-scrollbar px-6 sm:px-8 py-5">
               {/* 1. Project Title */}
               <div>
                 {isEditingTitle ? (
@@ -634,8 +640,8 @@ export function ProjectDetailModal({
                 )}
 
                 {/* Subtitle / Description with Expand / Minimise & Bottom Blur Fade */}
-                {project.description ? (
-                  <div className="relative mt-2">
+                {cleanedDescription ? (
+                  <div className="relative mt-1.5">
                     <div
                       ref={descriptionRef}
                       className={`rich-text-editor-content text-xs sm:text-sm text-primary-dark/85 leading-relaxed max-w-2xl font-normal transition-all duration-300 ease-in-out ${
@@ -643,7 +649,7 @@ export function ProjectDetailModal({
                           ? 'max-h-24 overflow-hidden select-none'
                           : 'max-h-none'
                       }`}
-                      dangerouslySetInnerHTML={{ __html: project.description }}
+                      dangerouslySetInnerHTML={{ __html: cleanedDescription }}
                     />
 
                     {/* Bottom Read More Blur / Fade Overlay with Dropdown Arrow */}
@@ -663,7 +669,7 @@ export function ProjectDetailModal({
 
                     {/* Minimise Arrow Button when Expanded */}
                     {isDescriptionExpanded && canExpand && (
-                      <div className="flex justify-center pt-1.5">
+                      <div className="flex justify-center mt-1">
                         <button
                           type="button"
                           onClick={() => setIsDescriptionExpanded(false)}
@@ -684,7 +690,7 @@ export function ProjectDetailModal({
               </div>
 
               {/* 2. Metadata Key-Value List matching uploaded UI */}
-              <div className="space-y-2.5 pt-0.5 text-xs select-none">
+              <div className="space-y-2.5 mt-2.5 text-xs select-none">
                 {/* Status Row */}
                 <div className="flex items-center">
                   <span className="w-28 sm:w-32 text-primary-medium/60 font-medium">
@@ -874,7 +880,7 @@ export function ProjectDetailModal({
               </div>
 
               {/* 3. Tabs: [ Subtask ] [ Attachment ] [ Comments ] */}
-              <div className="border-b border-primary-medium/15 pt-2">
+              <div className="border-b border-primary-medium/15 pt-2 mt-5">
                 <div className="flex items-center gap-6">
                   <button
                     type="button"
@@ -924,7 +930,7 @@ export function ProjectDetailModal({
               </div>
 
               {/* 4. Tab Content */}
-              <div className="flex-1">
+              <div className="flex-1 mt-3.5">
                 {/* ---------------- SUBTASK TAB ---------------- */}
                 {activeTab === 'subtask' && (
                   <div className="space-y-4">
