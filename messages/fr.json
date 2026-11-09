@@ -449,6 +449,8 @@
       "customColor": "Couleur personnalisée",
       "members": "Membres",
       "searchPlaceholder": "Ajouter des membres par nom ou e-mail",
+      "noMembersYet": "Aucun membre ajouté pour l'instant",
+      "searchToAddMembers": "Recherchez ci-dessus pour ajouter des membres à cette équipe",
       "youBadge": "Vous",
       "invitePending": "Invitation en attente",
       "resetToDefault": "Rétablir par défaut",

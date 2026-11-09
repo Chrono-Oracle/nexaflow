@@ -20,14 +20,16 @@ export default function TeamPage() {
         data-team-header
         className="sticky top-[112px] md:top-[72px] z-30 bg-white/95 backdrop-blur-md rounded-2xl p-4 sm:px-6 sm:py-3.5 border border-primary-medium/15 shadow-xs font-elms transition-all"
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center justify-between gap-3 sm:gap-4">
           <div>
             <h1 className="text-lg sm:text-xl font-bold text-primary-dark">
               {t('title')}
             </h1>
-            <p className="text-xs sm:text-sm text-primary-medium/70 mt-0.5">
-              {t('subtitle')}
-            </p>
+            {teams.length === 0 && (
+              <p className="text-xs sm:text-sm text-primary-medium/70 mt-0.5">
+                {t('subtitle')}
+              </p>
+            )}
           </div>
 
           {/* Create Team button in header appears once teams have been created */}

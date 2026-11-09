@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import {
   LuX,
   LuSearch,
-  LuSparkles,
+  LuUsers,
   LuPlus,
   LuCheck,
   LuMail,
@@ -42,28 +42,10 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
 
   const allUsers = useMemo(() => getAuthUsers(), []);
 
-  // Default owner/current user
-  const defaultOwnerMember: TeamMember = useMemo(
-    () => ({
-      id: currentUser.id || 'usr_01',
-      name: currentUser.fullName,
-      email: currentUser.email,
-      role: currentUser.workspace.role || 'Owner',
-      department: 'Operations',
-      avatar: currentUser.avatar || '/Avatar.jpg',
-      capacity: 100,
-      activeTaskCount: 0,
-      status: 'Active',
-    }),
-    []
-  );
-
   // Form states
   const [teamName, setTeamName] = useState('');
   const [selectedColor, setSelectedColor] = useState('#7C3AED');
-  const [selectedMembers, setSelectedMembers] = useState<TeamMember[]>([
-    defaultOwnerMember,
-  ]);
+  const [selectedMembers, setSelectedMembers] = useState<TeamMember[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -160,11 +142,8 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
     setIsSearchFocused(false);
   };
 
-  // Remove a member from the team (except the creator/owner)
+  // Remove a member from the team
   const handleRemoveMember = (memberId: string) => {
-    if (memberId === defaultOwnerMember.id) {
-      return; // Cannot remove owner
-    }
     setSelectedMembers((prev) => prev.filter((m) => m.id !== memberId));
   };
 
@@ -172,7 +151,7 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
   const handleResetToDefault = () => {
     setTeamName('');
     setSelectedColor('#7C3AED');
-    setSelectedMembers([defaultOwnerMember]);
+    setSelectedMembers([]);
     setSearchQuery('');
   };
 
@@ -205,28 +184,32 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
     }
   };
 
-  if (!isOpen) return null;
-
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto font-elms">
-        {/* Backdrop */}
+      {isOpen && (
         <motion.div
+          key="create-team-modal-root"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          onClick={onClose}
-          className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
-        />
-
-        {/* Modal Dialog Card */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 12 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 12 }}
-          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="relative w-full max-w-lg bg-white rounded-3xl p-5 sm:p-7 shadow-2xl border border-primary-medium/15 z-10 my-8 overflow-hidden select-none"
+          transition={{ duration: 0.18, ease: 'easeOut' }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto font-elms"
         >
+          {/* Backdrop - solid dark overlay without compositor buffer flash or css transition clash */}
+          <div
+            onClick={onClose}
+            className="fixed inset-0 bg-black/50"
+            aria-hidden="true"
+          />
+
+          {/* Modal Dialog Card */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 8 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="relative w-full max-w-lg bg-white rounded-3xl p-5 sm:p-7 shadow-2xl border border-primary-medium/15 z-10 my-8 overflow-hidden select-none"
+          >
           {/* Top Header */}
           <div className="flex items-start justify-between gap-4 pb-5">
             <div className="flex items-center gap-3.5">
@@ -238,7 +221,7 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
                   color: selectedColor,
                 }}
               >
-                <LuSparkles className="w-6 h-6 stroke-[2]" />
+                <LuUsers className="w-6 h-6 stroke-[2]" />
               </div>
 
               <div>
@@ -274,7 +257,6 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
                 onChange={(e) => setTeamName(e.target.value)}
                 placeholder={t('teamNamePlaceholder')}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-primary-medium/20 text-primary-dark placeholder:text-primary-medium/40 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 text-xs sm:text-sm transition-all"
-                autoFocus
               />
             </div>
 
@@ -428,65 +410,77 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
                 )}
               </div>
 
-              {/* Selected Members List */}
-              <div className="mt-3.5 space-y-2.5 max-h-56 overflow-y-auto pr-1">
-                {selectedMembers.map((member) => {
-                  const isOwner = member.id === defaultOwnerMember.id;
-                  const isPending = member.isPending;
+              {/* Selected Members List with Fixed Height & Scroll */}
+              <div className="mt-3.5 h-44 sm:h-48 overflow-y-auto pr-1 custom-scrollbar">
+                {selectedMembers.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-4 border border-dashed border-primary-medium/20 rounded-2xl bg-neutral-50/50 select-none">
+                    <LuUsers className="w-5 h-5 text-primary-medium/40 mb-1.5" />
+                    <p className="text-xs font-semibold text-primary-dark">
+                      {t('noMembersYet')}
+                    </p>
+                    <p className="text-[11px] text-primary-medium/60 mt-0.5">
+                      {t('searchToAddMembers')}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {selectedMembers.map((member) => {
+                      const isCurrentUser = member.email === currentUser.email;
+                      const isPending = member.isPending;
 
-                  return (
-                    <div
-                      key={member.id}
-                      className="group flex items-center justify-between p-2 rounded-xl hover:bg-neutral-50/70 transition-colors"
-                    >
-                      {/* Avatar & Info */}
-                      <div className="flex items-center gap-3 min-w-0">
-                        <Image
-                          src={member.avatar || '/Avatar.jpg'}
-                          alt={member.name}
-                          width={36}
-                          height={36}
-                          className="w-9 h-9 rounded-full object-cover shrink-0 border border-primary-medium/10"
-                        />
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-xs sm:text-sm font-semibold text-primary-dark truncate">
-                              {member.name}
-                            </span>
-                            {/* Badges */}
-                            {isOwner && (
-                              <span className="text-[10px] font-medium bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded-md">
-                                {t('youBadge')}
-                              </span>
-                            )}
-                            {isPending && (
-                              <span className="text-[10px] font-medium bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded-md">
-                                {t('invitePending')}
-                              </span>
-                            )}
+                      return (
+                        <div
+                          key={member.id}
+                          className="group flex items-center justify-between p-2 rounded-xl hover:bg-neutral-50/80 transition-colors"
+                        >
+                          {/* Avatar & Info */}
+                          <div className="flex items-center gap-3 min-w-0">
+                            <Image
+                              src={member.avatar || '/Avatar.jpg'}
+                              alt={member.name}
+                              width={36}
+                              height={36}
+                              className="w-9 h-9 rounded-full object-cover shrink-0 border border-primary-medium/10"
+                            />
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-xs sm:text-sm font-semibold text-primary-dark truncate">
+                                  {member.name}
+                                </span>
+                                {/* Badges */}
+                                {isCurrentUser && (
+                                  <span className="text-[10px] font-medium bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded-md">
+                                    {t('youBadge')}
+                                  </span>
+                                )}
+                                {isPending && (
+                                  <span className="text-[10px] font-medium bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded-md">
+                                    {t('invitePending')}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] sm:text-xs text-primary-medium/70 truncate">
+                                {member.email}
+                              </p>
+                            </div>
                           </div>
-                          <p className="text-[11px] sm:text-xs text-primary-medium/70 truncate">
-                            {member.email}
-                          </p>
-                        </div>
-                      </div>
 
-                      {/* Right Side: No dropdown as requested! Optional remove button for non-owner */}
-                      <div className="shrink-0 flex items-center">
-                        {!isOwner && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveMember(member.id)}
-                            className="opacity-0 group-hover:opacity-100 p-1.5 text-primary-medium/40 hover:text-red-500 rounded-lg hover:bg-red-50 transition-all cursor-pointer"
-                            title="Remove member"
-                          >
-                            <LuX className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                          {/* Right Side: Remove button for all members */}
+                          <div className="shrink-0 flex items-center">
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveMember(member.id)}
+                              className="opacity-0 group-hover:opacity-100 p-1.5 text-primary-medium/40 hover:text-red-500 rounded-lg hover:bg-red-50 transition-all cursor-pointer"
+                              title="Remove member"
+                            >
+                              <LuX className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -527,7 +521,8 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
             </div>
           </form>
         </motion.div>
-      </div>
-    </AnimatePresence>
+      </motion.div>
+    )}
+  </AnimatePresence>
   );
 }
