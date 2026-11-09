@@ -1,12 +1,8 @@
 export type SettingsTabId =
   | 'profile'
-  | 'workspace'
-  | 'notifications'
   | 'appearance'
   | 'team-roles'
-  | 'security'
-  | 'integrations'
-  | 'data';
+  | 'security';
 
 export interface SettingsTabItem {
   id: SettingsTabId;

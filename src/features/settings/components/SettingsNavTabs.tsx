@@ -10,13 +10,9 @@ interface SettingsNavTabsProps {
 
 export const SETTINGS_TABS: SettingsTabItem[] = [
   { id: 'profile', label: 'Profile' },
-  { id: 'workspace', label: 'Workspace' },
-  { id: 'notifications', label: 'Notifications' },
   { id: 'appearance', label: 'Appearance' },
   { id: 'team-roles', label: 'Team & Roles' },
   { id: 'security', label: 'Security' },
-  { id: 'integrations', label: 'Integrations' },
-  { id: 'data', label: 'Data & Storage' },
 ];
 
 export function SettingsNavTabs({
