@@ -15,6 +15,7 @@ import {
   AppearanceSettings,
 } from '../../types/settings.types';
 import { useTheme } from '@/context/ThemeContext';
+import { DEFAULT_APPEARANCE } from '../../utils/settingsStorage';
 
 const PRESET_BRAND_COLORS = [
   { id: 'charcoal', hex: '#1e1e1e', label: 'Obsidian' },
@@ -29,16 +30,33 @@ export function AppearanceTab() {
   const {
     appearance,
     updateAppearance,
+    setTheme,
+    setBrandColor,
+    setTransparentSidebar,
+    setTablesView,
+    setCompanyLogo,
   } = useTheme();
 
   // Local draft state so the user can preview and commit with "Save changes"
-  const [draft, setDraft] = useState<AppearanceSettings>(appearance);
+  const [draft, setDraft] = useState<AppearanceSettings>(() => ({
+    ...DEFAULT_APPEARANCE,
+    ...(appearance || {}),
+    brandColor: appearance?.brandColor || DEFAULT_APPEARANCE.brandColor,
+  }));
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sync draft if global appearance changes externally
   useEffect(() => {
-    setDraft(appearance);
+    if (appearance) {
+      setDraft({
+        ...DEFAULT_APPEARANCE,
+        ...appearance,
+        brandColor: appearance.brandColor || DEFAULT_APPEARANCE.brandColor,
+      });
+    }
   }, [appearance]);
+
+  const activeBrandColor = draft?.brandColor || DEFAULT_APPEARANCE.brandColor;
 
   // Handle logo file upload
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,6 +72,7 @@ export function AppearanceTab() {
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string;
       setDraft((prev) => ({ ...prev, companyLogo: dataUrl }));
+      setCompanyLogo(dataUrl);
       toast.success('Company logo updated');
     };
     reader.readAsDataURL(file);
@@ -61,19 +80,30 @@ export function AppearanceTab() {
 
   const handleRemoveLogo = () => {
     setDraft((prev) => ({ ...prev, companyLogo: null }));
+    setCompanyLogo(null);
     toast.info('Custom logo removed');
   };
 
   const handleSelectColor = (hex: string) => {
     setDraft((prev) => ({ ...prev, brandColor: hex }));
+    setBrandColor(hex);
   };
 
   const handleSelectTheme = (mode: ThemeMode) => {
     setDraft((prev) => ({ ...prev, theme: mode }));
+    setTheme(mode);
+    const label =
+      mode === 'system'
+        ? 'System preference'
+        : mode === 'dark'
+        ? 'Dark'
+        : 'Light';
+    toast.success(`Theme set to ${label}`);
   };
 
   const handleSelectTableView = (mode: TablesViewMode) => {
     setDraft((prev) => ({ ...prev, tablesView: mode }));
+    setTablesView(mode);
   };
 
   const handleSave = () => {
@@ -83,6 +113,10 @@ export function AppearanceTab() {
 
   const handleCancel = () => {
     setDraft(appearance);
+    setTheme(appearance.theme);
+    setBrandColor(appearance.brandColor);
+    setTransparentSidebar(appearance.transparentSidebar);
+    setTablesView(appearance.tablesView);
     toast.info('Changes reverted');
   };
 
@@ -199,7 +233,7 @@ export function AppearanceTab() {
           <div className="flex items-center gap-3">
             {PRESET_BRAND_COLORS.map((color) => {
               const isSelected =
-                draft.brandColor.toLowerCase() === color.hex.toLowerCase();
+                activeBrandColor.toLowerCase() === color.hex.toLowerCase();
 
               return (
                 <button
@@ -231,7 +265,7 @@ export function AppearanceTab() {
               </span>
               <input
                 type="text"
-                value={draft.brandColor.replace('#', '').toUpperCase()}
+                value={activeBrandColor.replace('#', '').toUpperCase()}
                 onChange={(e) => {
                   const val = e.target.value.replace(/[^0-9A-Fa-f]/g, '');
                   if (val.length <= 6) {
@@ -247,12 +281,12 @@ export function AppearanceTab() {
             <label
               title="Pick a color"
               className="w-7 h-7 rounded-full shadow-2xs ring-2 ring-primary-medium/30 cursor-pointer overflow-hidden relative shrink-0 inline-block"
-              style={{ backgroundColor: draft.brandColor }}
+              style={{ backgroundColor: activeBrandColor }}
             >
               <input
                 type="color"
                 value={
-                  draft.brandColor.length === 7 ? draft.brandColor : '#2C68F6'
+                  activeBrandColor.length === 7 ? activeBrandColor : '#2C68F6'
                 }
                 onChange={(e) => handleSelectColor(e.target.value)}
                 className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
@@ -457,9 +491,10 @@ export function AppearanceTab() {
           <ToggleSwitch
             id="transparent-sidebar-toggle"
             checked={draft.transparentSidebar}
-            onChange={(val) =>
-              setDraft((prev) => ({ ...prev, transparentSidebar: val }))
-            }
+            onChange={(val) => {
+              setDraft((prev) => ({ ...prev, transparentSidebar: val }));
+              setTransparentSidebar(val);
+            }}
           />
         </div>
       </div>

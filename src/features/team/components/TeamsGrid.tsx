@@ -699,15 +699,20 @@ export function TeamsGrid({
                   <div className="flex items-center -space-x-2 overflow-hidden">
                     {team.members.length > 0 ? (
                       team.members.slice(0, 5).map((member) => (
-                        <Image
+                        <div
                           key={member.id}
-                          src={member.avatar || '/Avatar.jpg'}
-                          alt={member.name}
-                          width={30}
-                          height={30}
-                          className="inline-block w-7 h-7 sm:w-8 sm:h-8 rounded-full ring-2 ring-white object-cover"
+                          className="relative inline-block w-7 h-7 sm:w-8 sm:h-8 rounded-full ring-2 ring-white overflow-hidden bg-neutral-100 shrink-0"
                           title={member.name}
-                        />
+                        >
+                          <Image
+                            src={member.avatar || '/Avatar.jpg'}
+                            alt={member.name}
+                            width={32}
+                            height={32}
+                            unoptimized
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
                       ))
                     ) : (
                       <span className="text-xs text-primary-medium/50 italic">

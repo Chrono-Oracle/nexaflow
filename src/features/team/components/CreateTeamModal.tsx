@@ -362,6 +362,7 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
                           alt={user.fullName}
                           width={32}
                           height={32}
+                          unoptimized
                           className="w-8 h-8 rounded-full object-cover shrink-0 border border-primary-medium/10"
                         />
                         <div className="flex-1 min-w-0">
@@ -441,6 +442,7 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
                               alt={member.name}
                               width={36}
                               height={36}
+                              unoptimized
                               className="w-9 h-9 rounded-full object-cover shrink-0 border border-primary-medium/10"
                             />
                             <div className="min-w-0">

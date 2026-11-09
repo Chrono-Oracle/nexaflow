@@ -43,55 +43,54 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setMounted(true);
   }, []);
 
+  const applyThemeToDom = (theme: ThemeMode) => {
+    if (typeof document === 'undefined') return;
+    const root = document.documentElement;
+    let isDark = false;
+    if (theme === 'dark') {
+      isDark = true;
+    } else if (theme === 'light') {
+      isDark = false;
+    } else {
+      isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+
+    if (isDark) {
+      root.classList.add('dark');
+      root.style.colorScheme = 'dark';
+    } else {
+      root.classList.remove('dark');
+      root.style.colorScheme = 'light';
+    }
+  };
+
   // Synchronize theme with DOM
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const root = document.documentElement;
-
-    const applyTheme = (theme: ThemeMode) => {
-      let isDark = false;
-      if (theme === 'dark') {
-        isDark = true;
-      } else if (theme === 'light') {
-        isDark = false;
-      } else {
-        isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      }
-
-      if (isDark) {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
-    };
-
-    applyTheme(appearance.theme);
+    const currentTheme = appearance?.theme || DEFAULT_APPEARANCE.theme;
+    applyThemeToDom(currentTheme);
 
     // Apply custom brand color
-    if (appearance.brandColor) {
-      root.style.setProperty('--brand-color', appearance.brandColor);
-      root.style.setProperty('--brand-accent', appearance.brandColor);
-    }
+    const brandColor = appearance?.brandColor || DEFAULT_APPEARANCE.brandColor;
+    root.style.setProperty('--brand-color', brandColor);
+    root.style.setProperty('--brand-accent', brandColor);
 
     // Set transparent sidebar attribute
     root.setAttribute(
       'data-transparent-sidebar',
-      appearance.transparentSidebar ? 'true' : 'false'
+      appearance?.transparentSidebar ? 'true' : 'false'
     );
 
     // Set table density attribute
-    root.setAttribute('data-table-view', appearance.tablesView);
+    root.setAttribute('data-table-view', appearance?.tablesView || 'default');
 
     // Listen for OS system theme changes if theme === 'system'
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleSystemChange = (e: MediaQueryListEvent) => {
-      if (appearance.theme === 'system') {
-        if (e.matches) {
-          root.classList.add('dark');
-        } else {
-          root.classList.remove('dark');
-        }
+    const handleSystemChange = () => {
+      if (currentTheme === 'system') {
+        applyThemeToDom('system');
       }
     };
 
@@ -105,6 +104,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   ]);
 
   const updateAppearance = (partial: Partial<AppearanceSettings>) => {
+    if (partial.theme) {
+      applyThemeToDom(partial.theme);
+    }
     setAppearance((prev) => {
       const updated = { ...prev, ...partial };
       settingsStorage.saveAppearance(updated);
@@ -112,7 +114,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const setTheme = (theme: ThemeMode) => updateAppearance({ theme });
+  const setTheme = (theme: ThemeMode) => {
+    applyThemeToDom(theme);
+    updateAppearance({ theme });
+  };
   const setBrandColor = (brandColor: string) => updateAppearance({ brandColor });
   const setTransparentSidebar = (transparentSidebar: boolean) =>
     updateAppearance({ transparentSidebar });

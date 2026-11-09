@@ -107,6 +107,12 @@ export function Sidebar() {
     },
   ];
 
+  const isDarkTheme =
+    appearance.theme === 'dark' ||
+    (appearance.theme === 'system' &&
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches);
+
   return (
     <motion.aside
       onMouseEnter={handleMouseEnter}
@@ -114,14 +120,24 @@ export function Sidebar() {
       animate={{
         width: isExpanded ? 260 : 56,
         backgroundColor: isExpanded
-          ? appearance.transparentSidebar
+          ? isDarkTheme
+            ? appearance.transparentSidebar
+              ? 'rgba(32, 26, 21, 0.72)'
+              : 'rgba(32, 26, 21, 0.98)'
+            : appearance.transparentSidebar
             ? 'rgba(255, 255, 255, 0.72)'
             : 'rgba(255, 255, 255, 0.98)'
           : 'rgba(255, 255, 255, 0)',
         boxShadow: isExpanded
-          ? '0 12px 30px -6px rgba(38, 21, 11, 0.12), 0 4px 10px -2px rgba(38, 21, 11, 0.04)'
+          ? isDarkTheme
+            ? '0 12px 30px -6px rgba(0, 0, 0, 0.5), 0 4px 10px -2px rgba(0, 0, 0, 0.3)'
+            : '0 12px 30px -6px rgba(38, 21, 11, 0.12), 0 4px 10px -2px rgba(38, 21, 11, 0.04)'
           : 'none',
-        borderColor: isExpanded ? 'rgba(115, 88, 64, 0.15)' : 'rgba(115, 88, 64, 0)',
+        borderColor: isExpanded
+          ? isDarkTheme
+            ? 'rgba(219, 221, 216, 0.15)'
+            : 'rgba(115, 88, 64, 0.15)'
+          : 'rgba(115, 88, 64, 0)',
       }}
       transition={{
         type: 'spring',
@@ -146,24 +162,6 @@ export function Sidebar() {
           />
         ))}
       </nav>
-
-      {/* Sidebar Feature Badge (when enabled and expanded) */}
-      {isExpanded && appearance.sidebarFeature !== 'none' && (
-        <div className="mx-1 my-2 px-2.5 py-1.5 rounded-lg bg-primary-surface/40 dark:bg-card border border-primary-medium/15 flex items-center gap-2 text-[11px] font-medium text-primary-dark">
-          <span
-            className={`w-2 h-2 rounded-full shrink-0 ${
-              appearance.sidebarFeature === 'recent-changes'
-                ? 'bg-emerald-500 animate-pulse'
-                : appearance.sidebarFeature === 'shortcuts'
-                ? 'bg-blue-500'
-                : 'bg-amber-500'
-            }`}
-          />
-          <span className="truncate capitalize">
-            {appearance.sidebarFeature.replace('-', ' ')}
-          </span>
-        </div>
-      )}
 
       {/* Bottom Settings & Help Items permanently pinned at bottom */}
       <div className={`flex flex-col gap-2 w-full ${isExpanded ? 'pt-2.5 border-t border-primary-medium/10' : ''}`}>
