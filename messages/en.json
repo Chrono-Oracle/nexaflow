@@ -435,6 +435,14 @@
     "title": "Team Directory",
     "subtitle": "Overview of team members, roles and workload capacities.",
     "createTeam": "Create Team",
+    "filterTabs": {
+      "all": "All",
+      "active": "Active teams",
+      "standby": "On standby"
+    },
+    "searchPlaceholder": "Search teams, projects, members...",
+    "noSearchResults": "No teams matching your search",
+    "clearSearch": "Clear search",
     "emptyState": {
       "title": "No teams created yet",
       "description": "Start building your team to collaborate on projects, assign tasks, and track workload capacity across your workspace.",

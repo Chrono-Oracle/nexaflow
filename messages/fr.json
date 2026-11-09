@@ -435,6 +435,14 @@
     "title": "Annuaire de l'équipe",
     "subtitle": "Aperçu des membres de l'équipe, des rôles et des capacités de charge de travail.",
     "createTeam": "Créer une équipe",
+    "filterTabs": {
+      "all": "Tous",
+      "active": "Équipes actives",
+      "standby": "En attente"
+    },
+    "searchPlaceholder": "Rechercher équipes, projets, membres...",
+    "noSearchResults": "Aucune équipe ne correspond à votre recherche",
+    "clearSearch": "Effacer la recherche",
     "emptyState": {
       "title": "Aucune équipe créée pour l'instant",
       "description": "Commencez à bâtir votre équipe pour collaborer sur des projets, attribuer des tâches et suivre la charge de travail.",

@@ -19,5 +19,8 @@ export interface Team {
   members: TeamMember[];
   createdAt: string;
   description?: string;
+  projectId?: string;
+  projectName?: string;
+  status?: 'Active' | 'On Standby';
 }
 

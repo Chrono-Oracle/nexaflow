@@ -320,6 +320,25 @@ export function useDeleteTeamMutation() {
   });
 }
 
+export function useUpdateTeamMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      updates,
+    }: {
+      id: string;
+      updates: Partial<Omit<Team, 'id' | 'createdAt'>>;
+    }) => storageApi.updateTeam(id, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.TEAMS });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITIES });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.STATS });
+    },
+  });
+}
+
 // ==========================================
 // ACTIVITIES HOOK
 // ==========================================

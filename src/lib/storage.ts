@@ -562,7 +562,11 @@ export const storageApi = {
   // TEAMS CRUD
   // ==========================================
   async getTeams(): Promise<Team[]> {
-    return getStoredItem<Team[]>(STORAGE_KEYS.TEAMS, []);
+    const teams = getStoredItem<Team[]>(STORAGE_KEYS.TEAMS, []);
+    return teams.map((t) => ({
+      ...t,
+      status: t.projectId ? 'Active' : 'On Standby',
+    }));
   },
 
   async getTeamById(id: string): Promise<Team | null> {
@@ -576,6 +580,7 @@ export const storageApi = {
       ...data,
       id: `team_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       createdAt: new Date().toISOString(),
+      status: data.projectId ? 'Active' : 'On Standby',
     };
 
     const updated = [newTeam, ...teams];
@@ -614,6 +619,7 @@ export const storageApi = {
     const updatedTeam = {
       ...teams[index],
       ...updates,
+      status: updates.projectId ? ('Active' as const) : (updates.status || 'On Standby'),
     };
 
     teams[index] = updatedTeam;

@@ -171,6 +171,7 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
         color: selectedColor,
         memberIds: selectedMembers.map((m) => m.id),
         members: selectedMembers,
+        status: 'On Standby',
       });
 
       toast.success(t('teamCreatedSuccess'));
