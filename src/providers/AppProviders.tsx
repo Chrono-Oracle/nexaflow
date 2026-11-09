@@ -4,6 +4,7 @@ import { type ReactNode } from 'react';
 import { Toaster } from 'sonner';
 import { QueryProvider } from './QueryProvider';
 import { SidebarProvider } from '@/context/SidebarContext';
+import { ThemeProvider } from '@/context/ThemeContext';
 import { useStorageSync } from '@/hooks/useDashboardData';
 
 function StorageSyncListener() {
@@ -15,7 +16,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <QueryProvider>
       <StorageSyncListener />
-      <SidebarProvider>{children}</SidebarProvider>
+      <ThemeProvider>
+        <SidebarProvider>{children}</SidebarProvider>
+      </ThemeProvider>
       <Toaster
         position="top-right"
         richColors

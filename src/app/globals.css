@@ -23,6 +23,17 @@
   --card: #ffffff;
   --card-foreground: #26150b;
   --border: rgba(64, 48, 34, 0.12);
+
+  /* Dynamic Brand Color & Accent (Appearance settings) */
+  --brand-color: #2c68f6;
+  --brand-accent: #2c68f6;
+}
+
+/* Compact tables view when selected in Appearance settings */
+[data-table-view="compact"] table tbody tr td,
+[data-table-view="compact"] .table-row-item {
+  padding-top: 0.35rem !important;
+  padding-bottom: 0.35rem !important;
 }
 
 @theme inline {

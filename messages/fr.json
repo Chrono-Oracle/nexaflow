@@ -399,7 +399,9 @@
       "clearTeams": "Effacer les équipes assignées",
       "done": "Terminé",
       "assign": "+ Assigner",
-      "assigned": "Assignée"
+      "assigned": "Assignée",
+      "teamMemberLocked": "{name} fait partie de l'équipe assignée « {team} » et ne peut pas être retiré(e).",
+      "teamMemberBadge": "Membre d'équipe"
     },
     "detailModal": {
       "breadcrumb": "Détail du projet",
@@ -484,7 +486,19 @@
       "noMatching": "Aucun membre correspondant à « {query} »",
       "active": "Actif",
       "onLeave": "En congé",
-      "taskCount": "{count, plural, =1 {1 tâche} other {# tâches}}"
+      "taskCount": "{count, plural, =1 {1 tâche} other {# tâches}}",
+      "addMembers": "Ajouter des membres",
+      "addMemberBtn": "+ Ajouter un membre",
+      "deleteTeam": "Supprimer l'équipe",
+      "confirmDelete": "Supprimer cette équipe ?",
+      "yesDelete": "Oui, supprimer",
+      "cancel": "Annuler",
+      "searchAddPlaceholder": "Rechercher des utilisateurs à ajouter...",
+      "allUsersInTeam": "Tous les utilisateurs sont dans cette équipe",
+      "noMatchingUsers": "Aucun utilisateur correspondant à « {query} »",
+      "removeMember": "Retirer le membre de l'équipe",
+      "editRole": "Modifier le rôle",
+      "role": "Rôle"
     }
   }
 }

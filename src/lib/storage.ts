@@ -646,10 +646,16 @@ export const storageApi = {
     const index = teams.findIndex((t) => t.id === id);
     if (index === -1) return null;
 
+    const finalProjectId = updates.projectId !== undefined ? updates.projectId : teams[index].projectId;
+    const finalStatus = updates.status !== undefined
+      ? updates.status
+      : (finalProjectId ? ('Active' as const) : (teams[index].status || 'On Standby'));
+
     const updatedTeam = {
       ...teams[index],
       ...updates,
-      status: updates.projectId ? ('Active' as const) : (updates.status || 'On Standby'),
+      projectId: finalProjectId,
+      status: finalStatus,
     };
 
     teams[index] = updatedTeam;

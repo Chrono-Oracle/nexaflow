@@ -1,18 +1,16 @@
-'use client';
-
-import { useTranslations } from 'next-intl';
+import { Suspense } from 'react';
+import { SettingsContainer } from '@/features/settings/components/SettingsContainer';
 
 export default function SettingsPage() {
-  const t = useTranslations('pages');
-
   return (
-    <div className="bg-white/75 backdrop-blur-md border border-primary-medium/10 rounded-2xl p-8 shadow-xs max-w-4xl">
-      <h1 className="text-2xl font-bold text-primary-dark">
-        {t('settingsTitle')}
-      </h1>
-      <p className="text-primary-medium mt-1 text-sm">
-        {t('settingsDesc')}
-      </p>
-    </div>
+    <Suspense
+      fallback={
+        <div className="w-full p-8 flex items-center justify-center min-h-[300px]">
+          <div className="w-8 h-8 rounded-full border-2 border-primary-dark/20 border-t-primary-dark animate-spin" />
+        </div>
+      }
+    >
+      <SettingsContainer />
+    </Suspense>
   );
 }

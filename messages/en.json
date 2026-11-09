@@ -399,7 +399,9 @@
       "clearTeams": "Clear assigned teams",
       "done": "Done",
       "assign": "+ Assign",
-      "assigned": "Assigned"
+      "assigned": "Assigned",
+      "teamMemberLocked": "{name} is part of assigned team \"{team}\" and cannot be removed.",
+      "teamMemberBadge": "Team member"
     },
     "detailModal": {
       "breadcrumb": "Project Detail",
@@ -484,7 +486,19 @@
       "noMatching": "No members matching \"{query}\"",
       "active": "Active",
       "onLeave": "On Leave",
-      "taskCount": "{count, plural, =1 {1 task} other {# tasks}}"
+      "taskCount": "{count, plural, =1 {1 task} other {# tasks}}",
+      "addMembers": "Add members",
+      "addMemberBtn": "+ Add Member",
+      "deleteTeam": "Delete team",
+      "confirmDelete": "Delete this team?",
+      "yesDelete": "Yes, delete",
+      "cancel": "Cancel",
+      "searchAddPlaceholder": "Search workspace users to add...",
+      "allUsersInTeam": "All workspace users are in this team",
+      "noMatchingUsers": "No users matching \"{query}\"",
+      "removeMember": "Remove member from team",
+      "editRole": "Edit role",
+      "role": "Role"
     }
   }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
@@ -13,6 +13,7 @@ import {
   LuCheck,
   LuTrash2,
   LuUsers,
+  LuLock,
 } from 'react-icons/lu';
 import {
   useAddProjectMutation,
@@ -129,10 +130,44 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
     );
   }, [teams, teamSearchQuery]);
 
+  // Helper: Check if a user belongs to a specific team (by id, email, or memberIds)
+  const isUserInTeam = useCallback((team: Team, userId: string, userEmail?: string) => {
+    if (!team) return false;
+    if (team.memberIds && team.memberIds.includes(userId)) return true;
+    if (
+      team.members &&
+      team.members.some(
+        (m) =>
+          m.id === userId ||
+          (userEmail && m.email && m.email.toLowerCase() === userEmail.toLowerCase()) ||
+          (m.name && userEmail && m.name.toLowerCase() === userEmail.toLowerCase())
+      )
+    ) {
+      return true;
+    }
+    return false;
+  }, []);
+
+  // Helper: Check if a user belongs to ANY currently assigned team
+  const getAssignedTeamForUser = useCallback(
+    (userId: string, userEmail?: string): Team | undefined => {
+      return assignedTeams.find((team) => isUserInTeam(team, userId, userEmail));
+    },
+    [assignedTeams, isUserInTeam]
+  );
+
   // Open the individual member assignment panel
   const handleOpenMembersDrawer = () => {
     const map = new Map<string, ProjectMemberRole>();
     assignedMembers.forEach((m) => map.set(m.id, m.role));
+    // Ensure all assigned team members are included in staging
+    assignedTeams.forEach((t) => {
+      (t.members || []).forEach((m) => {
+        if (!map.has(m.id)) {
+          map.set(m.id, 'Member');
+        }
+      });
+    });
     setStagingMembers(map);
     setMemberSearchQuery('');
     setOpenRoleDropdownId(null);
@@ -179,26 +214,30 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
       nextSelected.delete(team.id);
       setSelectedTeamIds(nextSelected);
 
-      // Other remaining teams
+      // Remaining assigned teams after this removal
       const remainingTeams = teams.filter(
         (t) => nextSelected.has(t.id) && t.id !== team.id
       );
-      const remainingTeamMemberIds = new Set<string>();
-      remainingTeams.forEach((t) => {
-        (t.members || []).forEach((m) => remainingTeamMemberIds.add(m.id));
-      });
 
-      const teamMemberIds = new Set((team.members || []).map((m) => m.id));
+      // Check if a member belongs to any remaining team
+      const isInRemaining = (memberId: string, memberEmail?: string) => {
+        return remainingTeams.some((t) => isUserInTeam(t, memberId, memberEmail));
+      };
+
+      // Check if a member belongs to the team being removed
+      const isInRemoved = (memberId: string, memberEmail?: string) => {
+        return isUserInTeam(team, memberId, memberEmail);
+      };
 
       setAssignedMembers((currentMembers) =>
         currentMembers.filter((m) => {
-          // If member is not in this unassigned team, keep
-          if (!teamMemberIds.has(m.id)) return true;
-          // If member is in another remaining selected team, keep
-          if (remainingTeamMemberIds.has(m.id)) return true;
-          // If member was explicitly added individually, keep
+          // If member is not in the removed team, keep
+          if (!isInRemoved(m.id, m.email)) return true;
+          // If member also belongs to another still-assigned team, keep
+          if (isInRemaining(m.id, m.email)) return true;
+          // If member was explicitly added individually outside of any team, keep
           if (individuallyAddedUserIds.has(m.id)) return true;
-          // Otherwise remove
+          // Otherwise: remove them!
           return false;
         })
       );
@@ -215,6 +254,14 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
 
   // Toggle member selection in staging
   const handleToggleMember = (user: AuthUser) => {
+    const assignedTeam = getAssignedTeamForUser(user.id, user.email);
+    if (assignedTeam) {
+      toast.info(
+        t('teamMemberLocked', { name: user.fullName, team: assignedTeam.name })
+      );
+      return;
+    }
+
     const isCurrentUser =
       user.id === currentUser.id ||
       user.email === currentUser.email ||
@@ -243,7 +290,11 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
 
   // Reset to default members (UI 3)
   const handleResetMembersToDefault = () => {
-    setStagingMembers(new Map());
+    const defaultStaging = new Map<string, ProjectMemberRole>();
+    assignedTeams.forEach((t) => {
+      (t.members || []).forEach((m) => defaultStaging.set(m.id, 'Member'));
+    });
+    setStagingMembers(defaultStaging);
     setOpenRoleDropdownId(null);
   };
 
@@ -262,11 +313,14 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
           avatar: user.avatar,
           role,
         });
-        individualIds.add(user.id);
+        // ONLY mark as individually added if NOT a member of any assigned team!
+        if (!getAssignedTeamForUser(user.id, user.email)) {
+          individualIds.add(user.id);
+        }
       }
     });
 
-    // Ensure members from assigned teams remain in assignedMembers even if not touched in individual drawer
+    // Ensure all members from assigned teams remain in assignedMembers even if not touched in individual drawer
     const committedIds = new Set(committed.map((m) => m.id));
     const activeTeams = teams.filter((t) => selectedTeamIds.has(t.id));
 
@@ -292,6 +346,11 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
 
   // Quick remove member from the profile pics row
   const handleRemoveAssignedMember = (memberId: string) => {
+    const member = assignedMembers.find((m) => m.id === memberId);
+    if (member && getAssignedTeamForUser(member.id, member.email)) {
+      return;
+    }
+
     setAssignedMembers((prev) => prev.filter((m) => m.id !== memberId));
     setIndividuallyAddedUserIds((prev) => {
       const next = new Set(prev);
@@ -648,42 +707,60 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
                   ))}
 
                   {/* Assigned Individual/Team Member Avatars */}
-                  {assignedMembers.slice(0, 6).map((member) => (
-                    <div
-                      key={member.id}
-                      className="relative group shrink-0"
-                      title={`${member.name} (${member.role})`}
-                    >
-                      {member.avatar ? (
-                        <Image
-                          src={member.avatar}
-                          alt={member.name}
-                          width={38}
-                          height={38}
-                          unoptimized
-                          className="w-9.5 h-9.5 rounded-full object-cover border-2 border-white shadow-2xs group-hover:scale-105 transition-transform"
-                        />
-                      ) : (
-                        <span className="w-9.5 h-9.5 rounded-full bg-primary-dark text-white text-xs font-bold flex items-center justify-center border-2 border-white shadow-2xs">
-                          {member.name.slice(0, 2).toUpperCase()}
-                        </span>
-                      )}
+                  {assignedMembers.slice(0, 6).map((member) => {
+                    const memberTeam = getAssignedTeamForUser(member.id, member.email);
+                    const isTeamMember = Boolean(memberTeam);
 
-                      {/* Small '✕' Remove Badge on Profile Pic */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveAssignedMember(member.id);
-                        }}
-                        className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white text-primary-dark/70 hover:text-red-600 hover:bg-red-50 border border-primary-medium/30 flex items-center justify-center shadow-2xs transition-colors cursor-pointer"
-                        title="Remove member"
-                        aria-label={`Remove ${member.name}`}
+                    return (
+                      <div
+                        key={member.id}
+                        className="relative group shrink-0"
+                        title={`${member.name} (${member.role})${
+                          memberTeam ? ` · Team: ${memberTeam.name}` : ''
+                        }`}
                       >
-                        <LuX className="w-2.5 h-2.5 stroke-[2.5]" />
-                      </button>
-                    </div>
-                  ))}
+                        {member.avatar ? (
+                          <Image
+                            src={member.avatar}
+                            alt={member.name}
+                            width={38}
+                            height={38}
+                            unoptimized
+                            className="w-9.5 h-9.5 rounded-full object-cover border-2 border-white shadow-2xs group-hover:scale-105 transition-transform"
+                          />
+                        ) : (
+                          <span className="w-9.5 h-9.5 rounded-full bg-primary-dark text-white text-xs font-bold flex items-center justify-center border-2 border-white shadow-2xs">
+                            {member.name.slice(0, 2).toUpperCase()}
+                          </span>
+                        )}
+
+                        {/* Team Indicator Dot Badge on Profile Pic */}
+                        {memberTeam && (
+                          <span
+                            className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white shadow-2xs shrink-0"
+                            style={{ backgroundColor: memberTeam.color || '#3B82F6' }}
+                            title={`Member of ${memberTeam.name}`}
+                          />
+                        )}
+
+                        {/* Small '✕' Remove Badge on Profile Pic: ONLY for individually added members, NOT for team members */}
+                        {!isTeamMember && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveAssignedMember(member.id);
+                            }}
+                            className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white text-primary-dark/70 hover:text-red-600 hover:bg-red-50 border border-primary-medium/30 flex items-center justify-center shadow-2xs transition-colors cursor-pointer"
+                            title={`Remove ${member.name}`}
+                            aria-label={`Remove ${member.name}`}
+                          >
+                            <LuX className="w-2.5 h-2.5 stroke-[2.5]" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
 
                   {/* If more than 6 members, indicate with +Remaining badge */}
                   {assignedMembers.length > 6 && (
@@ -963,7 +1040,9 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
                       {/* Members List with Role Dropdowns (UI 2) */}
                       <div className="max-h-56 overflow-y-auto custom-scrollbar space-y-2 pr-1">
                         {filteredUsers.map((user) => {
-                          const isSelected = stagingMembers.has(user.id);
+                          const assignedTeam = getAssignedTeamForUser(user.id, user.email);
+                          const isTeamMember = Boolean(assignedTeam);
+                          const isSelected = isTeamMember || stagingMembers.has(user.id);
                           const currentRole = stagingMembers.get(user.id) || 'Member';
                           const isCurrentUser =
                             user.id === currentUser.id ||
@@ -981,8 +1060,21 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
                             >
                               {/* Left: Avatar + Name + Email */}
                               <div
-                                onClick={() => handleToggleMember(user)}
-                                className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer select-none"
+                                onClick={() => {
+                                  if (isTeamMember) {
+                                    toast.info(
+                                      t('teamMemberLocked', {
+                                        name: user.fullName,
+                                        team: assignedTeam?.name || 'team',
+                                      })
+                                    );
+                                    return;
+                                  }
+                                  handleToggleMember(user);
+                                }}
+                                className={`flex items-center gap-3 min-w-0 flex-1 select-none ${
+                                  isTeamMember ? 'cursor-default' : 'cursor-pointer'
+                                }`}
                               >
                                 {user.avatar ? (
                                   <Image
@@ -1000,13 +1092,29 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
                                 )}
 
                                 <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-1.5">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
                                     <span className="text-xs sm:text-sm font-bold text-primary-dark truncate">
                                       {user.fullName}
                                     </span>
                                     {isCurrentUser && (
                                       <span className="text-[10px] font-semibold bg-primary-surface px-1.5 py-0.2 rounded text-primary-dark/80">
                                         {t('you')}
+                                      </span>
+                                    )}
+                                    {assignedTeam && (
+                                      <span
+                                        className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white text-primary-dark border border-primary-medium/20 shadow-2xs"
+                                        title={`Member of assigned team "${assignedTeam.name}"`}
+                                      >
+                                        <span
+                                          className="w-1.5 h-1.5 rounded-full shrink-0"
+                                          style={{
+                                            backgroundColor: assignedTeam.color || '#3B82F6',
+                                          }}
+                                        />
+                                        <span className="truncate max-w-[110px]">
+                                          {assignedTeam.name}
+                                        </span>
                                       </span>
                                     )}
                                   </div>
@@ -1024,15 +1132,17 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
                                     <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-primary-dark text-white shadow-2xs select-none">
                                       {t('roles.owner') || 'Owner'}
                                     </span>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleToggleMember(user)}
-                                      className="p-1 rounded-md text-primary-medium/60 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                                      title="Remove from project"
-                                      aria-label="Remove from project"
-                                    >
-                                      <LuX className="w-3.5 h-3.5" />
-                                    </button>
+                                    {!isTeamMember && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleToggleMember(user)}
+                                        className="p-1 rounded-md text-primary-medium/60 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                                        title="Remove from project"
+                                        aria-label="Remove from project"
+                                      >
+                                        <LuX className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
                                   </div>
                                 ) : (
                                   /* Other members: dropdown with Manager or Member */
@@ -1052,15 +1162,28 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
                                       <LuChevronDown className="w-3.5 h-3.5 text-primary-medium/70" />
                                     </button>
 
-                                    <button
-                                      type="button"
-                                      onClick={() => handleToggleMember(user)}
-                                      className="p-1 rounded-md text-primary-medium/60 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                                      title="Remove member"
-                                      aria-label="Remove member"
-                                    >
-                                      <LuX className="w-3.5 h-3.5" />
-                                    </button>
+                                    {/* Remove button ONLY if NOT part of an assigned team */}
+                                    {!isTeamMember ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleToggleMember(user)}
+                                        className="p-1 rounded-md text-primary-medium/60 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                                        title="Remove member"
+                                        aria-label="Remove member"
+                                      >
+                                        <LuX className="w-3.5 h-3.5" />
+                                      </button>
+                                    ) : (
+                                      <span
+                                        className="p-1 text-primary-medium/40 cursor-default select-none"
+                                        title={t('teamMemberLocked', {
+                                          name: user.fullName,
+                                          team: assignedTeam?.name || 'team',
+                                        })}
+                                      >
+                                        <LuLock className="w-3.5 h-3.5" />
+                                      </span>
+                                    )}
 
                                     {/* Role Dropdown Menu: Manager or Member */}
                                     {openRoleDropdownId === user.id && (
@@ -1097,7 +1220,7 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
                                   onClick={() => handleToggleMember(user)}
                                   className="px-3 py-1.5 rounded-lg border border-primary-medium/25 text-xs font-semibold text-primary-dark hover:bg-primary-surface/40 transition-colors cursor-pointer shrink-0"
                                 >
-                                  + Add
+                                  {t('assign') || 'Assign'}
                                 </button>
                               )}
                             </div>
