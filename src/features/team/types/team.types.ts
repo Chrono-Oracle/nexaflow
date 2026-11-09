@@ -21,6 +21,8 @@ export interface Team {
   description?: string;
   projectId?: string;
   projectName?: string;
+  projectIds?: string[];
+  projectNames?: string[];
   status?: 'Active' | 'On Standby';
 }
 

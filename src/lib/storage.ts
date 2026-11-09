@@ -104,6 +104,36 @@ export const storageApi = {
     const updated = [newProject, ...projects];
     setStoredItem(STORAGE_KEYS.PROJECTS, updated);
 
+    // If teams are assigned to this project, register the project on the teams and set them to Active
+    if (newProject.teamIds && newProject.teamIds.length > 0) {
+      const teams = await storageApi.getTeams();
+      const teamIdSet = new Set(newProject.teamIds);
+      let teamsChanged = false;
+
+      const updatedTeams = teams.map((team) => {
+        if (teamIdSet.has(team.id)) {
+          teamsChanged = true;
+          const existingProjectIds = team.projectIds || (team.projectId ? [team.projectId] : []);
+          const projectIds = existingProjectIds.includes(newProject.id)
+            ? existingProjectIds
+            : [...existingProjectIds, newProject.id];
+
+          return {
+            ...team,
+            projectId: newProject.id,
+            projectName: newProject.name,
+            projectIds,
+            status: 'Active' as const,
+          };
+        }
+        return team;
+      });
+
+      if (teamsChanged) {
+        setStoredItem(STORAGE_KEYS.TEAMS, updatedTeams);
+      }
+    }
+
     // Record activity
     await storageApi.addActivity({
       type: 'project_created',

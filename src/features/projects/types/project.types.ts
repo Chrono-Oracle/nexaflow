@@ -73,6 +73,8 @@ export interface Project {
   createdAt: string;
   taskCount: number;
   tags: string[];
+  teamIds?: string[];
+  teams?: { id: string; name: string; color: string }[];
   members?: ProjectAssignedMember[];
   attachments?: ProjectAttachment[];
   subtasks?: ProjectSubtask[];

@@ -57,7 +57,7 @@ export function TeamEmptyState({
       <button
         type="button"
         onClick={onCreateTeam}
-        className="mt-6 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-primary-dark text-white text-xs sm:text-sm font-semibold shadow-xs hover:bg-primary transition-all duration-200 active:scale-95 cursor-pointer"
+        className="mt-6 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-md bg-primary-dark text-white text-xs sm:text-sm font-medium shadow-md hover:bg-primary transition-all duration-200 active:scale-95 cursor-pointer"
       >
         <LuPlus className="w-4 h-4 stroke-[2.5]" />
         <span>{actionLabel || t('createTeam')}</span>

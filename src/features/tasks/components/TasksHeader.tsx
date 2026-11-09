@@ -50,7 +50,7 @@ export function TasksHeader({
   return (
     <div
       data-tasks-header
-      className="sticky top-[112px] md:top-[72px] z-30 bg-white/95 backdrop-blur-md rounded-2xl p-4 sm:px-6 sm:py-3.5 border border-primary-medium/15 shadow-xs font-elms transition-all"
+      className="sticky top-0 z-20 bg-white/95 backdrop-blur-md rounded-2xl p-4 sm:px-6 sm:py-3.5 border border-primary-medium/15 shadow-xs font-elms transition-all"
     >
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Left: Views Tabs (Board, Table [md+ only], List) - fixed in position without horizontal scroll */}

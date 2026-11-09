@@ -12,7 +12,7 @@ export default function HomePage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   return (
-    <div className="font-elms w-full flex flex-col lg:h-[calc(100vh-130px)]">
+    <div className="font-elms w-full flex flex-col lg:h-full min-h-0">
       {/* Top Welcome Header Section */}
       <div className="shrink-0 mb-4 sm:mb-5">
         <WelcomeBanner onCreateProject={() => setIsCreateModalOpen(true)} />

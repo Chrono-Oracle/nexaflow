@@ -993,6 +993,29 @@ export function ProjectDetailModal({
                   </div>
                 </div>
 
+                {/* Assigned Teams Row if any */}
+                {project.teams && project.teams.length > 0 && (
+                  <div className="flex items-start">
+                    <span className="w-28 sm:w-32 text-primary-medium/60 font-medium pt-1">
+                      Teams
+                    </span>
+                    <div className="flex-1 flex flex-wrap gap-2 min-w-0">
+                      {project.teams.map((team) => (
+                        <span
+                          key={team.id}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-white border border-primary-medium/20 text-primary-dark shadow-2xs"
+                        >
+                          <span
+                            className="w-2 h-2 rounded-full shrink-0"
+                            style={{ backgroundColor: team.color || '#3B82F6' }}
+                          />
+                          <span>{team.name}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Assigned To Row - Split by Roles: Manager and Member */}
                 <div className="flex items-start">
                   <span className="w-28 sm:w-32 text-primary-medium/60 font-medium pt-1">

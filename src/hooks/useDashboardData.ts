@@ -72,6 +72,7 @@ export function useAddProjectMutation() {
       storageApi.addProject(newProject),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PROJECTS });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.TEAMS });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.STATS });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITIES });
     },

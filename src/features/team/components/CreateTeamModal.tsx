@@ -239,7 +239,7 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
             <button
               type="button"
               onClick={onClose}
-              className="text-primary-medium/60 hover:text-primary-dark p-2 rounded-xl hover:bg-neutral-100 transition-colors cursor-pointer shrink-0"
+              className="text-primary-medium/60 hover:text-primary-dark p-1.5 rounded-md hover:bg-neutral-100 transition-colors cursor-pointer shrink-0"
               aria-label="Close modal"
             >
               <LuX className="w-5 h-5" />
@@ -471,7 +471,7 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
                             <button
                               type="button"
                               onClick={() => handleRemoveMember(member.id)}
-                              className="opacity-0 group-hover:opacity-100 p-1.5 text-primary-medium/40 hover:text-red-500 rounded-lg hover:bg-red-50 transition-all cursor-pointer"
+                              className="opacity-0 group-hover:opacity-100 p-1 text-primary-medium/40 hover:text-red-500 rounded-md hover:bg-red-50 transition-all cursor-pointer"
                               title="Remove member"
                             >
                               <LuX className="w-4 h-4" />
@@ -501,7 +501,7 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 rounded-xl border border-primary-medium/20 text-xs sm:text-sm font-semibold text-primary-dark hover:bg-neutral-50 transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-md border border-primary-medium/20 text-xs sm:text-sm font-medium text-primary-dark hover:bg-neutral-50 transition-colors cursor-pointer"
                 >
                   {t('cancel')}
                 </button>
@@ -509,7 +509,7 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
                 <button
                   type="submit"
                   disabled={!teamName.trim() || isSubmitting}
-                  className="px-5 py-2 rounded-xl text-white text-xs sm:text-sm font-semibold shadow-xs transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2 hover:brightness-105"
+                  className="px-5 py-2 rounded-md text-white text-xs sm:text-sm font-medium shadow-md transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2 hover:brightness-105"
                   style={{ backgroundColor: selectedColor }}
                 >
                   {isSubmitting ? (

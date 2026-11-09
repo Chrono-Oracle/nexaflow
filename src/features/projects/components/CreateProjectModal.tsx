@@ -12,8 +12,13 @@ import {
   LuChevronDown,
   LuCheck,
   LuTrash2,
+  LuUsers,
 } from 'react-icons/lu';
-import { useAddProjectMutation } from '@/hooks/useDashboardData';
+import {
+  useAddProjectMutation,
+  useTeamsQuery,
+  useProjectsQuery,
+} from '@/hooks/useDashboardData';
 import { getAuthUsers, AuthUser } from '@/data/users';
 import { currentUser } from '@/data/userDashboard';
 import { RichTextEditor } from '@/components/ui/RichTextEditor/RichTextEditor';
@@ -28,6 +33,8 @@ import {
   ProjectAssignedMember,
 } from '../types/project.types';
 import { cleanTrailingEmptyHtml } from '../utils/htmlSanitizer';
+import { Team } from '@/features/team/types/team.types';
+import { isTeamActiveOnProject } from '@/features/team/utils/teamStatus';
 
 interface CreateProjectModalProps {
   isOpen: boolean;
@@ -39,6 +46,8 @@ const NON_OWNER_ROLES: ProjectMemberRole[] = ['Manager', 'Member'];
 export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps) {
   const t = useTranslations('projectsPage.createProjectModal');
   const addProjectMutation = useAddProjectMutation();
+  const { data: teams = [] } = useTeamsQuery();
+  const { data: projects = [] } = useProjectsQuery();
 
   const allUsers = useMemo(() => getAuthUsers(), []);
   const todayKey = useMemo(() => getTodayDateString(), []);
@@ -69,6 +78,15 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
   );
 
   const [assignedMembers, setAssignedMembers] = useState<ProjectAssignedMember[]>([]);
+  // Track members added or edited individually so they aren't removed if a team is unassigned
+  const [individuallyAddedUserIds, setIndividuallyAddedUserIds] = useState<Set<string>>(
+    new Set()
+  );
+
+  // Team Assignment State
+  const [isTeamDrawerOpen, setIsTeamDrawerOpen] = useState(false);
+  const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(new Set());
+  const [teamSearchQuery, setTeamSearchQuery] = useState('');
 
   // Extended Member Assignment Panel State (UI 2 & UI 3)
   const [isMembersDrawerOpen, setIsMembersDrawerOpen] = useState(false);
@@ -91,14 +109,108 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Open the member assignment panel
+  // Derived assigned teams
+  const assignedTeams = useMemo(() => {
+    return teams.filter((t) => selectedTeamIds.has(t.id));
+  }, [teams, selectedTeamIds]);
+
+  // Filtered teams for the team drawer search
+  const filteredTeams = useMemo(() => {
+    if (!teamSearchQuery.trim()) return teams;
+    const q = teamSearchQuery.toLowerCase();
+    return teams.filter(
+      (t) =>
+        t.name.toLowerCase().includes(q) ||
+        t.members?.some(
+          (m) =>
+            m.name.toLowerCase().includes(q) ||
+            m.email.toLowerCase().includes(q)
+        )
+    );
+  }, [teams, teamSearchQuery]);
+
+  // Open the individual member assignment panel
   const handleOpenMembersDrawer = () => {
     const map = new Map<string, ProjectMemberRole>();
     assignedMembers.forEach((m) => map.set(m.id, m.role));
     setStagingMembers(map);
     setMemberSearchQuery('');
     setOpenRoleDropdownId(null);
+    setIsTeamDrawerOpen(false);
     setIsMembersDrawerOpen(true);
+  };
+
+  // Toggle team assignment
+  const handleToggleTeam = (team: Team) => {
+    const isCurrentlySelected = selectedTeamIds.has(team.id);
+
+    if (!isCurrentlySelected) {
+      // Add team
+      setSelectedTeamIds((prev) => new Set(prev).add(team.id));
+
+      // Merge team members into assignedMembers
+      setAssignedMembers((currentMembers) => {
+        const existingIds = new Set(currentMembers.map((m) => m.id));
+        const membersToAdd: ProjectAssignedMember[] = [];
+
+        (team.members || []).forEach((m) => {
+          if (!existingIds.has(m.id)) {
+            const isCurrentUser =
+              m.id === currentUser.id ||
+              m.email === currentUser.email ||
+              m.id === 'usr_01';
+
+            membersToAdd.push({
+              id: m.id,
+              name: m.name,
+              email: m.email,
+              avatar: m.avatar,
+              role: isCurrentUser ? 'Owner' : 'Member',
+            });
+            existingIds.add(m.id);
+          }
+        });
+
+        return [...currentMembers, ...membersToAdd];
+      });
+    } else {
+      // Remove team
+      const nextSelected = new Set(selectedTeamIds);
+      nextSelected.delete(team.id);
+      setSelectedTeamIds(nextSelected);
+
+      // Other remaining teams
+      const remainingTeams = teams.filter(
+        (t) => nextSelected.has(t.id) && t.id !== team.id
+      );
+      const remainingTeamMemberIds = new Set<string>();
+      remainingTeams.forEach((t) => {
+        (t.members || []).forEach((m) => remainingTeamMemberIds.add(m.id));
+      });
+
+      const teamMemberIds = new Set((team.members || []).map((m) => m.id));
+
+      setAssignedMembers((currentMembers) =>
+        currentMembers.filter((m) => {
+          // If member is not in this unassigned team, keep
+          if (!teamMemberIds.has(m.id)) return true;
+          // If member is in another remaining selected team, keep
+          if (remainingTeamMemberIds.has(m.id)) return true;
+          // If member was explicitly added individually, keep
+          if (individuallyAddedUserIds.has(m.id)) return true;
+          // Otherwise remove
+          return false;
+        })
+      );
+    }
+  };
+
+  // Clear all assigned teams
+  const handleClearAllTeams = () => {
+    setSelectedTeamIds(new Set());
+    setAssignedMembers((prev) =>
+      prev.filter((m) => individuallyAddedUserIds.has(m.id))
+    );
   };
 
   // Toggle member selection in staging
@@ -138,6 +250,8 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
   // Confirm and assign members (UI 3)
   const handleConfirmAssignMembers = () => {
     const committed: ProjectAssignedMember[] = [];
+    const individualIds = new Set<string>();
+
     stagingMembers.forEach((role, userId) => {
       const user = allUsers.find((u) => u.id === userId);
       if (user) {
@@ -148,9 +262,30 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
           avatar: user.avatar,
           role,
         });
+        individualIds.add(user.id);
       }
     });
 
+    // Ensure members from assigned teams remain in assignedMembers even if not touched in individual drawer
+    const committedIds = new Set(committed.map((m) => m.id));
+    const activeTeams = teams.filter((t) => selectedTeamIds.has(t.id));
+
+    activeTeams.forEach((t) => {
+      (t.members || []).forEach((tm) => {
+        if (!committedIds.has(tm.id)) {
+          committed.push({
+            id: tm.id,
+            name: tm.name,
+            email: tm.email,
+            avatar: tm.avatar,
+            role: 'Member',
+          });
+          committedIds.add(tm.id);
+        }
+      });
+    });
+
+    setIndividuallyAddedUserIds(individualIds);
     setAssignedMembers(committed);
     setIsMembersDrawerOpen(false);
   };
@@ -158,6 +293,11 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
   // Quick remove member from the profile pics row
   const handleRemoveAssignedMember = (memberId: string) => {
     setAssignedMembers((prev) => prev.filter((m) => m.id !== memberId));
+    setIndividuallyAddedUserIds((prev) => {
+      const next = new Set(prev);
+      next.delete(memberId);
+      return next;
+    });
   };
 
   const resetEntireForm = () => {
@@ -167,6 +307,10 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
     setStartDate(todayKey);
     setAssignedMembers([]);
     setIsMembersDrawerOpen(false);
+    setIsTeamDrawerOpen(false);
+    setSelectedTeamIds(new Set());
+    setIndividuallyAddedUserIds(new Set());
+    setTeamSearchQuery('');
     setAttachments([]);
     setNotifications({ email: true, slack: false });
     setReminder('1 hour before');
@@ -198,6 +342,10 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
         },
       };
 
+      const assignedTeamsList = teams
+        .filter((t) => selectedTeamIds.has(t.id))
+        .map((t) => ({ id: t.id, name: t.name, color: t.color }));
+
       await addProjectMutation.mutateAsync({
         name: name.trim(),
         description: cleanTrailingEmptyHtml(description),
@@ -209,6 +357,8 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
         color: '#26150b',
         taskCount: 0,
         tags: ['General'],
+        teamIds: Array.from(selectedTeamIds),
+        teams: assignedTeamsList,
         members: assignedMembers,
         attachments: attachments.map((a) => ({
           id: a.id,
@@ -450,9 +600,16 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
               {/* 3. Project Members Section */}
               <div className="pt-1">
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-xs sm:text-sm font-semibold text-primary-dark">
-                    {t('projectMembers')}
-                  </label>
+                  <div className="flex items-center gap-2">
+                    <label className="block text-xs sm:text-sm font-semibold text-primary-dark">
+                      {t('projectMembers')}
+                    </label>
+                    {selectedTeamIds.size > 0 && (
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary-surface text-primary-dark border border-primary-medium/20">
+                        {selectedTeamIds.size} {selectedTeamIds.size === 1 ? 'team' : 'teams'}
+                      </span>
+                    )}
+                  </div>
                   <button
                     type="button"
                     onClick={handleOpenMembersDrawer}
@@ -465,6 +622,32 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
 
                 {/* Main Profile Pics Row (UI 4 / UI 1) */}
                 <div className="flex items-center gap-2.5 flex-wrap p-3 rounded-xl bg-[#faf9f5] border border-primary-medium/20">
+                  {/* Assigned Team Badge Pills */}
+                  {assignedTeams.map((team) => (
+                    <div
+                      key={team.id}
+                      className="inline-flex items-center gap-1.5 pl-2.5 pr-2 py-1 rounded-full text-xs font-semibold bg-white border border-primary-medium/25 text-primary-dark shadow-2xs shrink-0"
+                    >
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: team.color || '#3B82F6' }}
+                      />
+                      <span className="truncate max-w-[120px]">{team.name}</span>
+                      <span className="text-[10px] text-primary-medium/60 font-medium">
+                        ({team.members?.length || 0})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleTeam(team)}
+                        className="p-0.5 rounded-full text-primary-medium/60 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                        title={`Remove ${team.name}`}
+                      >
+                        <LuX className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* Assigned Individual/Team Member Avatars */}
                   {assignedMembers.slice(0, 6).map((member) => (
                     <div
                       key={member.id}
@@ -516,13 +699,231 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
                   {/* Quick Add Button beside avatars */}
                   <button
                     type="button"
-                    onClick={handleOpenMembersDrawer}
-                    className="w-9.5 h-9.5 rounded-full border border-dashed border-primary-medium/35 hover:border-primary-dark text-primary-medium/70 hover:text-primary-dark flex items-center justify-center bg-white transition-all cursor-pointer shadow-2xs shrink-0"
+                    onClick={() => {
+                      setIsTeamDrawerOpen(false);
+                      handleOpenMembersDrawer();
+                    }}
+                    className={`w-9.5 h-9.5 rounded-full border border-dashed flex items-center justify-center bg-white transition-all cursor-pointer shadow-2xs shrink-0 ${
+                      isMembersDrawerOpen
+                        ? 'border-primary-dark ring-2 ring-primary-dark/20 text-primary-dark bg-primary-surface/30'
+                        : 'border-primary-medium/35 hover:border-primary-dark text-primary-medium/70 hover:text-primary-dark'
+                    }`}
                     title={t('addMembers')}
                   >
                     <LuPlus className="w-4 h-4 stroke-[2.5]" />
                   </button>
+
+                  {/* Assign Team Button (beside + sign with LuUsers icon) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMembersDrawerOpen(false);
+                      setIsTeamDrawerOpen((prev) => !prev);
+                    }}
+                    className={`w-9.5 h-9.5 rounded-full border border-dashed flex items-center justify-center bg-white transition-all cursor-pointer shadow-2xs shrink-0 ${
+                      isTeamDrawerOpen || selectedTeamIds.size > 0
+                        ? 'border-primary ring-2 ring-primary/20 text-primary bg-primary/5'
+                        : 'border-primary-medium/35 hover:border-primary-dark text-primary-medium/70 hover:text-primary-dark'
+                    }`}
+                    title={t('assignTeam')}
+                    aria-label={t('assignTeam')}
+                  >
+                    <LuUsers className="w-4 h-4 stroke-[2.2]" />
+                  </button>
                 </div>
+
+                {/* Extended Team Assignment Drawer */}
+                <AnimatePresence>
+                  {isTeamDrawerOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                      animate={{ opacity: 1, height: 'auto', marginTop: 12 }}
+                      exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                      transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+                      className="overflow-hidden bg-white border border-primary-medium/20 rounded-2xl shadow-md p-4 sm:p-5 space-y-4"
+                    >
+                      {/* Drawer Header */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-xl bg-primary-surface/60 flex items-center justify-center text-primary-dark">
+                            <LuUsers className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-bold text-primary-dark">
+                              {t('assignTeamsTitle')}
+                            </h3>
+                            <p className="text-[11px] text-primary-medium/70">
+                              {t('assignTeamsSubtitle')}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-xs text-primary-medium/80 font-semibold px-2.5 py-1 rounded-lg bg-primary-surface/60">
+                          {selectedTeamIds.size} selected
+                        </span>
+                      </div>
+
+                      {/* Team Search Input */}
+                      <div className="relative flex items-center">
+                        <LuSearch
+                          className="absolute left-3 w-4 h-4 text-primary-medium/60 pointer-events-none"
+                          aria-hidden="true"
+                        />
+                        <input
+                          type="text"
+                          value={teamSearchQuery}
+                          onChange={(e) => setTeamSearchQuery(e.target.value)}
+                          placeholder={t('searchTeamsPlaceholder')}
+                          className="w-full text-xs sm:text-sm bg-[#faf9f5] border border-primary-medium/25 rounded-xl pl-9 pr-8 py-2.5 text-primary-dark placeholder:text-primary-medium/50 focus:outline-none focus:ring-2 focus:ring-primary-dark/20 focus:border-primary-dark transition-all"
+                        />
+                        {teamSearchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => setTeamSearchQuery('')}
+                            className="absolute right-2.5 text-primary-medium/50 hover:text-primary-dark p-0.5 rounded-full cursor-pointer"
+                          >
+                            <LuX className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Teams List */}
+                      <div className="max-h-56 overflow-y-auto custom-scrollbar space-y-2 pr-1">
+                        {filteredTeams.length === 0 ? (
+                          <div className="py-8 text-center text-xs text-primary-medium/70">
+                            {teams.length === 0
+                              ? t('noTeamsCreated')
+                              : t('noTeamsMatching', { query: teamSearchQuery })}
+                          </div>
+                        ) : (
+                          filteredTeams.map((team) => {
+                            const isSelected = selectedTeamIds.has(team.id);
+                            const { isActive, projectName: activeProjName } = isTeamActiveOnProject(
+                              team,
+                              projects
+                            );
+
+                            return (
+                              <div
+                                key={team.id}
+                                className={`flex items-center justify-between gap-3 p-2.5 sm:p-3 rounded-xl border transition-all ${
+                                  isSelected
+                                    ? 'bg-[#faf9f6] border-primary-dark/30 shadow-2xs'
+                                    : 'bg-white border-primary-medium/15 hover:border-primary-medium/30'
+                                }`}
+                              >
+                                {/* Left: Color dot + Team name + Member count & avatars */}
+                                <div
+                                  onClick={() => handleToggleTeam(team)}
+                                  className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer select-none"
+                                >
+                                  <span
+                                    className="w-3.5 h-3.5 rounded-full shrink-0 shadow-2xs"
+                                    style={{ backgroundColor: team.color || '#3B82F6' }}
+                                  />
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs sm:text-sm font-bold text-primary-dark truncate">
+                                        {team.name}
+                                      </span>
+                                      <span className="text-[11px] text-primary-medium/70 font-medium">
+                                        · {team.members?.length || 0} members
+                                      </span>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 mt-1">
+                                      {team.members && team.members.length > 0 ? (
+                                        <div className="flex items-center -space-x-1.5 overflow-hidden">
+                                          {team.members.slice(0, 4).map((m) => (
+                                            <Image
+                                              key={m.id}
+                                              src={m.avatar || '/Avatar.jpg'}
+                                              alt={m.name}
+                                              width={20}
+                                              height={20}
+                                              unoptimized
+                                              className="inline-block w-5 h-5 rounded-full ring-1 ring-white object-cover"
+                                            />
+                                          ))}
+                                          {team.members.length > 4 && (
+                                            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-neutral-100 text-primary-dark text-[9px] font-bold ring-1 ring-white">
+                                              +{team.members.length - 4}
+                                            </span>
+                                          )}
+                                        </div>
+                                      ) : null}
+
+                                      {isActive && activeProjName && (
+                                        <span className="text-[10px] text-primary-medium/60 truncate max-w-[140px]">
+                                          ({activeProjName})
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Right: Status badge & Toggle Button */}
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {/* Status Badge */}
+                                  {isActive ? (
+                                    <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200/50">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                      Active
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200/50">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                      On Standby
+                                    </span>
+                                  )}
+
+                                  {/* Toggle Button */}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleTeam(team)}
+                                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+                                      isSelected
+                                        ? 'bg-primary-dark text-white shadow-2xs'
+                                        : 'border border-primary-medium/25 text-primary-dark hover:bg-primary-surface/40'
+                                    }`}
+                                  >
+                                    {isSelected ? (
+                                      <>
+                                        <LuCheck className="w-3.5 h-3.5" />
+                                        <span>{t('assigned')}</span>
+                                      </>
+                                    ) : (
+                                      <span>{t('assign')}</span>
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+
+                      {/* Drawer Footer */}
+                      <div className="flex items-center justify-between pt-3 border-t border-primary-medium/10">
+                        <button
+                          type="button"
+                          onClick={handleClearAllTeams}
+                          disabled={selectedTeamIds.size === 0}
+                          className="text-xs font-medium text-primary-medium/80 hover:text-primary-dark underline cursor-pointer disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed"
+                        >
+                          {t('clearTeams')}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setIsTeamDrawerOpen(false)}
+                          className="px-4 py-1.5 rounded-md bg-primary-dark hover:bg-primary text-white text-xs font-medium shadow-md transition-all active:scale-95 cursor-pointer"
+                        >
+                          {t('done')}
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {/* Extended Member Assignment UI (UI 2 & UI 3) */}
                 <AnimatePresence>

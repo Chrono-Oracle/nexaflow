@@ -57,7 +57,7 @@ export function ProjectsHeader({
   return (
     <div
       data-projects-header
-      className="sticky top-[112px] md:top-[72px] z-30 bg-white/95 backdrop-blur-md rounded-2xl p-4 sm:px-6 sm:py-3.5 border border-primary-medium/15 shadow-xs font-elms transition-all"
+      className="sticky top-0 z-20 bg-white/95 backdrop-blur-md rounded-2xl p-4 sm:px-6 sm:py-3.5 border border-primary-medium/15 shadow-xs font-elms transition-all"
     >
       {/* Main Top Header Bar matching reference UI */}
       <div className="flex items-center justify-between gap-4">

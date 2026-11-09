@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { useTranslations } from 'next-intl';
 import { LuPlus, LuSearch, LuX } from 'react-icons/lu';
 import { useTeamsQuery, useProjectsQuery } from '@/hooks/useDashboardData';
@@ -59,7 +60,7 @@ export default function TeamPage() {
       {/* Top Header Card */}
       <div
         data-team-header
-        className="sticky top-[112px] md:top-[72px] z-30 bg-white/95 backdrop-blur-md rounded-2xl p-4 sm:px-6 sm:py-3.5 border border-primary-medium/15 shadow-xs font-elms transition-all"
+        className="sticky top-0 z-20 bg-white/95 backdrop-blur-md rounded-2xl p-4 sm:px-6 sm:py-3.5 border border-primary-medium/15 shadow-xs font-elms transition-all"
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           {/* In Empty State: Show Title & Subtitle. Once teams exist: Show the 3 Filter Links */}
@@ -73,72 +74,51 @@ export default function TeamPage() {
               </p>
             </div>
           ) : (
-            <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
-              {/* Tab 1: All */}
-              <button
-                type="button"
-                onClick={() => setActiveFilter('all')}
-                className={`inline-flex items-center gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-                  activeFilter === 'all'
-                    ? 'bg-primary-surface text-primary-dark font-bold shadow-2xs'
-                    : 'text-primary-medium/70 hover:text-primary-dark hover:bg-neutral-50'
-                }`}
-              >
-                <span>{t('filterTabs.all')}</span>
-                <span
-                  className={`inline-flex items-center justify-center min-w-[20px] px-1.5 py-0.5 rounded-full text-[11px] font-bold transition-colors ${
-                    activeFilter === 'all'
-                      ? 'bg-white text-primary-dark shadow-2xs'
-                      : 'bg-neutral-100 text-primary-medium/80'
-                  }`}
-                >
-                  {teams.length}
-                </span>
-              </button>
+            <div className="flex items-center gap-1 sm:gap-2 border-b sm:border-b-0 border-primary-medium/10 pb-2 sm:pb-0 shrink-0">
+              {[
+                { id: 'all' as const, label: t('filterTabs.all'), count: teams.length },
+                { id: 'active' as const, label: t('filterTabs.active'), count: activeTeams.length },
+                { id: 'standby' as const, label: t('filterTabs.standby'), count: standbyTeams.length },
+              ].map((tab) => {
+                const isActive = activeFilter === tab.id;
 
-              {/* Tab 2: Active teams */}
-              <button
-                type="button"
-                onClick={() => setActiveFilter('active')}
-                className={`inline-flex items-center gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-                  activeFilter === 'active'
-                    ? 'bg-primary-surface text-primary-dark font-bold shadow-2xs'
-                    : 'text-primary-medium/70 hover:text-primary-dark hover:bg-neutral-50'
-                }`}
-              >
-                <span>{t('filterTabs.active')}</span>
-                <span
-                  className={`inline-flex items-center justify-center min-w-[20px] px-1.5 py-0.5 rounded-full text-[11px] font-bold transition-colors ${
-                    activeFilter === 'active'
-                      ? 'bg-white text-primary-dark shadow-2xs'
-                      : 'bg-neutral-100 text-primary-medium/80'
-                  }`}
-                >
-                  {activeTeams.length}
-                </span>
-              </button>
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveFilter(tab.id)}
+                    className={`relative flex items-center gap-2 px-3 sm:px-3.5 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors cursor-pointer select-none shrink-0 ${
+                      isActive
+                        ? 'text-primary-dark font-bold'
+                        : 'text-primary-medium/70 hover:text-primary-dark hover:bg-primary-surface/30'
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                    <span
+                      className={`inline-flex items-center justify-center min-w-[20px] px-1.5 py-0.5 rounded-full text-[11px] font-bold transition-colors ${
+                        isActive
+                          ? 'bg-primary-surface text-primary-dark shadow-2xs font-bold'
+                          : 'bg-neutral-100 text-primary-medium/80'
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
 
-              {/* Tab 3: On standby */}
-              <button
-                type="button"
-                onClick={() => setActiveFilter('standby')}
-                className={`inline-flex items-center gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-                  activeFilter === 'standby'
-                    ? 'bg-primary-surface text-primary-dark font-bold shadow-2xs'
-                    : 'text-primary-medium/70 hover:text-primary-dark hover:bg-neutral-50'
-                }`}
-              >
-                <span>{t('filterTabs.standby')}</span>
-                <span
-                  className={`inline-flex items-center justify-center min-w-[20px] px-1.5 py-0.5 rounded-full text-[11px] font-bold transition-colors ${
-                    activeFilter === 'standby'
-                      ? 'bg-white text-primary-dark shadow-2xs'
-                      : 'bg-neutral-100 text-primary-medium/80'
-                  }`}
-                >
-                  {standbyTeams.length}
-                </span>
-              </button>
+                    {/* Animated Active Underline Bar matching Tasks Page */}
+                    {isActive && (
+                      <motion.div
+                        layoutId="activeTeamNavTab"
+                        className="absolute -bottom-2 md:-bottom-3.5 left-2 right-2 h-0.5 bg-primary-dark rounded-full"
+                        transition={{
+                          type: 'spring',
+                          stiffness: 380,
+                          damping: 30,
+                        }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
 
@@ -156,7 +136,7 @@ export default function TeamPage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={t('searchPlaceholder')}
-                  className="w-full h-9 sm:h-9.5 pl-9 pr-8 rounded-xl bg-primary-surface/30 hover:bg-primary-surface/50 focus:bg-white border border-primary-medium/20 text-xs sm:text-sm text-primary-dark placeholder:text-primary-medium/60 focus:outline-none focus:ring-2 focus:ring-primary-dark/20 focus:border-primary-dark transition-all"
+                  className="w-full h-9 sm:h-9.5 pl-9 pr-8 rounded-md bg-primary-surface/30 hover:bg-primary-surface/50 focus:bg-white border border-primary-medium/20 text-xs sm:text-sm text-primary-dark placeholder:text-primary-medium/60 focus:outline-none focus:ring-2 focus:ring-primary-dark/20 focus:border-primary-dark transition-all"
                 />
                 {searchQuery && (
                   <button
@@ -174,7 +154,7 @@ export default function TeamPage() {
               <button
                 type="button"
                 onClick={() => setIsCreateTeamOpen(true)}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-primary-dark text-white text-xs sm:text-sm font-semibold shadow-xs hover:bg-primary transition-all duration-200 active:scale-95 cursor-pointer shrink-0"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-primary-dark text-white text-xs sm:text-sm font-medium shadow-md hover:bg-primary transition-all duration-200 active:scale-95 cursor-pointer shrink-0"
               >
                 <LuPlus className="w-4 h-4 stroke-[2.5]" />
                 <span>{t('createTeam')}</span>

@@ -389,7 +389,17 @@
       "submit": "Créer le projet",
       "submitting": "Création...",
       "success": "Projet créé avec succès !",
-      "nameRequired": "Le nom du projet est requis"
+      "nameRequired": "Le nom du projet est requis",
+      "assignTeam": "Assigner une équipe",
+      "assignTeamsTitle": "Assigner des équipes",
+      "assignTeamsSubtitle": "Sélectionnez une ou plusieurs équipes à affecter à ce projet",
+      "searchTeamsPlaceholder": "Rechercher des équipes par nom...",
+      "noTeamsCreated": "Aucune équipe créée. Vous pouvez créer des équipes dans le répertoire d'équipes.",
+      "noTeamsMatching": "Aucune équipe correspondant à « {query} »",
+      "clearTeams": "Effacer les équipes assignées",
+      "done": "Terminé",
+      "assign": "+ Assigner",
+      "assigned": "Assignée"
     },
     "detailModal": {
       "breadcrumb": "Détail du projet",
@@ -466,6 +476,15 @@
       "createTeam": "Créer l'équipe",
       "teamCreatedSuccess": "Équipe créée avec succès !",
       "nameRequired": "Veuillez saisir un nom d'équipe"
+    },
+    "membersDropdown": {
+      "title": "Membres de l'équipe",
+      "searchPlaceholder": "Rechercher des membres...",
+      "noMembers": "Aucun membre dans cette équipe pour le moment.",
+      "noMatching": "Aucun membre correspondant à « {query} »",
+      "active": "Actif",
+      "onLeave": "En congé",
+      "taskCount": "{count, plural, =1 {1 tâche} other {# tâches}}"
     }
   }
 }

@@ -9,8 +9,25 @@ export function isTeamActiveOnProject(
   projectName?: string;
   projectId?: string;
 } {
-  // A team is ONLY active when the team itself is assigned to an existing project.
-  // All newly created teams have a status of being on standby until assigned to a project.
+  // 1. Check if any project explicitly lists this team in project.teamIds or project.teams
+  const assignedProjects = projects.filter(
+    (p) =>
+      p.teamIds?.includes(team.id) ||
+      p.teams?.some((t) => t.id === team.id) ||
+      p.id === team.projectId ||
+      team.projectIds?.includes(p.id)
+  );
+
+  if (assignedProjects.length > 0) {
+    const projectNames = assignedProjects.map((p) => p.name).join(', ');
+    return {
+      isActive: true,
+      projectName: projectNames,
+      projectId: assignedProjects[0].id,
+    };
+  }
+
+  // 2. If team has an explicit projectId assigned
   if (team.projectId) {
     const project = projects.find((p) => p.id === team.projectId);
     if (project) {
@@ -22,6 +39,7 @@ export function isTeamActiveOnProject(
     }
   }
 
+  // 3. If team status is explicitly set to Active
   if (team.status === 'Active' && team.projectId) {
     const project = projects.find((p) => p.id === team.projectId);
     return {

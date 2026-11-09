@@ -56,13 +56,18 @@ export default async function LocaleLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${elmsSans.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col" suppressHydrationWarning>
+      <body
+        className="h-screen overflow-hidden flex flex-col font-elms bg-background text-foreground antialiased"
+        suppressHydrationWarning
+      >
         <NextIntlClientProvider messages={messages}>
           <AppProviders>
             <Header />
-            <div className="flex-1 flex px-4 md:px-6 pt-2 md:pt-2.5 pb-24 md:pb-6 gap-5 md:gap-6">
+            <div className="flex-1 flex overflow-hidden px-4 md:px-6 pt-2 md:pt-2.5 pb-20 md:pb-4 gap-5 md:gap-6 min-h-0">
               <Sidebar />
-              <main className="flex-1 min-w-0 transition-all">{children}</main>
+              <main className="flex-1 min-w-0 h-full overflow-y-auto custom-scrollbar transition-all pr-0.5">
+                {children}
+              </main>
             </div>
             <MobileNav />
           </AppProviders>

@@ -5,7 +5,7 @@ import { HeaderActions } from './components/HeaderActions';
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-40 w-full bg-primary-surface/80 backdrop-blur-md px-4 sm:px-6 py-2.5 sm:py-3.5 border-b border-primary-medium/10">
+    <header className="shrink-0 z-40 w-full bg-primary-surface/80 backdrop-blur-md px-4 sm:px-6 py-2.5 sm:py-3.5 border-b border-primary-medium/10">
       {/* Line 1: Logo & Header on left, Profile & Notification on right */}
       <div className="flex items-center justify-between gap-4 md:gap-6">
         {/* Left: Brand Logo (+ Search field on desktop) */}
