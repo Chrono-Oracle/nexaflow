@@ -47,8 +47,9 @@ export function WorkCompletedChartCard({
             <span>Work Completed</span>
             <div className="group relative cursor-pointer text-primary-medium/40 hover:text-primary-dark">
               <LuCircleHelp className="w-3.5 h-3.5" />
-              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 hidden group-hover:flex px-2.5 py-1 bg-primary-dark text-white text-[11px] font-medium rounded-md shadow-lg whitespace-nowrap z-30">
-                Calculates completion rate of active tasks and project deliverables
+              <div className="absolute top-full left-0 mt-2 hidden group-hover:flex flex-col w-64 p-3 bg-primary-dark text-white text-xs font-medium rounded-xl shadow-xl z-50 leading-relaxed pointer-events-none border border-white/10">
+                <span className="font-bold text-amber-300 mb-0.5">Work Completed</span>
+                <span className="text-white/90">Calculates the completion rate of active tasks and project deliverables across your workspace.</span>
               </div>
             </div>
           </div>
@@ -109,8 +110,15 @@ export function WorkCompletedChartCard({
           </div>
         ) : (
           <div className="relative h-24 flex items-end gap-1.5 sm:gap-2 px-1">
-            {metrics.histogramBars.map((bar) => {
+            {metrics.histogramBars.map((bar, index) => {
               const isHovered = hoveredBarId === bar.id;
+              const isFirst = index === 0;
+              const isLast = index === metrics.histogramBars.length - 1;
+              const tooltipAlignClass = isFirst
+                ? 'left-0'
+                : isLast
+                ? 'right-0'
+                : 'left-1/2 -translate-x-1/2';
               const maxBarWidth =
                 metrics.histogramBars.length <= 8
                   ? 'max-w-[20px]'
@@ -125,9 +133,11 @@ export function WorkCompletedChartCard({
                   onMouseLeave={() => setHoveredBarId(null)}
                   className="flex-1 flex flex-col items-center justify-end h-full relative cursor-pointer group"
                 >
-                  {/* Tooltip on hover */}
+                  {/* Tooltip on hover with edge alignment to prevent clipping */}
                   {isHovered && (
-                    <div className="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 bg-primary-dark text-white text-[10px] font-semibold px-2 py-1 rounded shadow-md whitespace-nowrap z-20 pointer-events-none">
+                    <div
+                      className={`absolute bottom-full mb-2 ${tooltipAlignClass} bg-primary-dark text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap z-40 pointer-events-none border border-white/10 max-w-xs truncate`}
+                    >
                       {bar.tooltip}
                     </div>
                   )}

@@ -38,8 +38,9 @@ export function HoursLoggedChartCard({
             <span>Active Duration</span>
             <div className="group relative cursor-pointer text-primary-medium/40 hover:text-primary-dark">
               <LuCircleHelp className="w-3.5 h-3.5" />
-              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 hidden group-hover:flex px-2.5 py-1 bg-primary-dark text-white text-[11px] font-medium rounded-md shadow-lg whitespace-nowrap z-30">
-                Elapsed running time of your latest project or active tasks
+              <div className="absolute top-full left-0 mt-2 hidden group-hover:flex flex-col w-64 p-3 bg-primary-dark text-white text-xs font-medium rounded-xl shadow-xl z-50 leading-relaxed pointer-events-none border border-white/10">
+                <span className="font-bold text-emerald-300 mb-0.5">Active Duration</span>
+                <span className="text-white/90">Tracks the live running time and active uptime of your latest project or operational tasks since they were started.</span>
               </div>
             </div>
           </div>
@@ -159,21 +160,32 @@ export function HoursLoggedChartCard({
 
           {/* Interactive points overlay */}
           <div className="absolute inset-0 flex items-center justify-between px-2 pointer-events-none">
-            {metrics.wavePoints.map((pt, idx) => (
-              <div
-                key={`${pt.label}-${idx}`}
-                className="pointer-events-auto h-full flex flex-col justify-end items-center relative group cursor-pointer"
-                onMouseEnter={() => setHoveredPointIndex(idx)}
-                onMouseLeave={() => setHoveredPointIndex(null)}
-              >
-                {hoveredPointIndex === idx && (
-                  <div className="absolute bottom-full mb-1 bg-primary-dark text-white text-[10px] font-semibold px-2 py-0.5 rounded shadow whitespace-nowrap z-30 pointer-events-none">
-                    {pt.tooltip}
-                  </div>
-                )}
-                <div className="w-2 h-2 rounded-full opacity-0 group-hover:opacity-100 bg-[#8B5CF6] transition-opacity" />
-              </div>
-            ))}
+            {metrics.wavePoints.map((pt, idx) => {
+              const tooltipAlign =
+                idx === 0
+                  ? 'left-0'
+                  : idx === metrics.wavePoints.length - 1
+                  ? 'right-0'
+                  : 'left-1/2 -translate-x-1/2';
+
+              return (
+                <div
+                  key={`${pt.label}-${idx}`}
+                  className="pointer-events-auto h-full flex flex-col justify-end items-center relative group cursor-pointer"
+                  onMouseEnter={() => setHoveredPointIndex(idx)}
+                  onMouseLeave={() => setHoveredPointIndex(null)}
+                >
+                  {hoveredPointIndex === idx && (
+                    <div
+                      className={`absolute bottom-full mb-1.5 ${tooltipAlign} bg-primary-dark text-white text-[10px] font-semibold px-2.5 py-1 rounded-md shadow-lg whitespace-nowrap z-30 pointer-events-none border border-white/10`}
+                    >
+                      {pt.tooltip}
+                    </div>
+                  )}
+                  <div className="w-2 h-2 rounded-full opacity-0 group-hover:opacity-100 bg-[#8B5CF6] transition-opacity" />
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

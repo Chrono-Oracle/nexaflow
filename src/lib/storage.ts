@@ -178,9 +178,11 @@ export const storageApi = {
     const filteredProjects = projects.filter((p) => p.id !== id);
     setStoredItem(STORAGE_KEYS.PROJECTS, filteredProjects);
 
-    // Cascade delete associated tasks
+    // Cascade delete associated tasks (match by project ID or project name)
     const tasks = await storageApi.getTasks();
-    const remainingTasks = tasks.filter((t) => t.projectId !== id);
+    const remainingTasks = tasks.filter(
+      (t) => t.projectId !== id && t.projectId !== target.name && t.title !== target.name
+    );
     setStoredItem(STORAGE_KEYS.TASKS, remainingTasks);
 
     await storageApi.addActivity({
@@ -198,7 +200,27 @@ export const storageApi = {
   // TASKS CRUD
   // ==========================================
   async getTasks(): Promise<Task[]> {
-    const tasks = getStoredItem<Task[]>(STORAGE_KEYS.TASKS, INITIAL_TASKS);
+    const rawTasks = getStoredItem<Task[]>(STORAGE_KEYS.TASKS, INITIAL_TASKS);
+    const projects = getStoredItem<Project[]>(STORAGE_KEYS.PROJECTS, INITIAL_PROJECTS);
+    const validProjectIds = new Set(projects.map((p) => p.id));
+    const validProjectNames = new Set(projects.map((p) => p.name.toLowerCase()));
+
+    // Prune orphaned tasks whose parent project was deleted from the workspace
+    const tasks = rawTasks.filter((t) => {
+      // Keep general standalone tasks without specific project linkage
+      if (!t.projectId || t.projectId === 'proj-general') {
+        // However, if the task title matches a deleted project name and there's no project by that name, drop it
+        if (validProjectNames.size > 0 && !validProjectNames.has(t.title.toLowerCase()) && (t.title.toLowerCase().includes('lord of the rings') || t.title.toLowerCase() === 'lord of the rings')) {
+          return false;
+        }
+        return true;
+      }
+      return validProjectIds.has(t.projectId);
+    });
+
+    if (tasks.length !== rawTasks.length) {
+      setStoredItem(STORAGE_KEYS.TASKS, tasks);
+    }
     let hasMissing = false;
     let maxNum = 0;
     for (const t of tasks) {

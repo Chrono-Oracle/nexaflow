@@ -205,14 +205,25 @@ export function useAnalyticsData() {
     'act-access-2': 'pending',
   });
 
-  // 1. Work Completed Metrics (Real Projects & Tasks - No Dummy Sprints)
+  // Active Project IDs to ensure deleted projects and their leftover tasks are never counted
+  const validProjectIds = useMemo(() => new Set(projects.map((p) => p.id)), [projects]);
+
+  // Tasks belonging strictly to active projects or general standalone tasks
+  const activeTasks = useMemo(() => {
+    return tasks.filter((t) => {
+      if (!t.projectId || t.projectId === 'proj-general') return true;
+      return validProjectIds.has(t.projectId);
+    });
+  }, [tasks, validProjectIds]);
+
+  // 1. Work Completed Metrics (Strictly Active Projects & Associated Deliverables)
   const workCompletedMetrics: WorkCompletedMetrics = useMemo(() => {
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7)).getTime(); // Monday
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
-    const isTaskInPeriod = (t: typeof tasks[0]) => {
+    const isTaskInPeriod = (t: typeof activeTasks[0]) => {
       if (workTimeframe === 'all') return true;
       const dateStr = t.createdAt || t.startDate;
       if (!dateStr) return true;
@@ -224,7 +235,7 @@ export function useAnalyticsData() {
       return true;
     };
 
-    const periodTasks = tasks.filter(isTaskInPeriod);
+    const periodTasks = activeTasks.filter(isTaskInPeriod);
     const totalTasksCount = periodTasks.length;
     const completedTasksCount = periodTasks.filter((t) => t.status === 'Completed').length;
     const totalProjects = projects.length;
@@ -241,10 +252,10 @@ export function useAnalyticsData() {
       comparisonText = `${completedProjects} of ${totalProjects} projects completed (${totalProjects - completedProjects} active).`;
     } else {
       rate = 0;
-      comparisonText = 'No tasks or projects logged yet for this period.';
+      comparisonText = 'No active projects or tasks logged yet for this period.';
     }
 
-    // Dynamic Histogram Bars (Real projects & tasks - no dummy sprints)
+    // Dynamic Histogram Bars (Strictly current, active projects - zero deleted projects/leftover tasks)
     let bars: {
       id: string;
       label: string;
@@ -253,20 +264,20 @@ export function useAnalyticsData() {
       tooltip: string;
     }[] = [];
 
-    if (totalProjects === 0 && tasks.length === 0) {
-      bars = Array.from({ length: 12 }, (_, i) => ({
+    if (totalProjects === 0 && activeTasks.length === 0) {
+      bars = Array.from({ length: 8 }, (_, i) => ({
         id: `empty-${i}`,
         label: '--',
         value: 6,
         color: 'neutral' as const,
-        tooltip: 'No activity recorded yet',
+        tooltip: 'No active projects',
       }));
     } else if (workTimeframe === 'week') {
       const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
       bars = dayNames.map((name, i) => {
         const d = new Date(startOfWeek + i * 24 * 3600 * 1000);
         const dStr = d.toISOString().split('T')[0];
-        const dayTasks = tasks.filter((t) => {
+        const dayTasks = activeTasks.filter((t) => {
           const tDate = t.createdAt?.split('T')[0] || t.startDate;
           return tDate === dStr;
         });
@@ -283,8 +294,9 @@ export function useAnalyticsData() {
         };
       });
     } else if (totalProjects > 0) {
+      // Each bar strictly maps 1:1 to an ACTIVE existing project
       bars = projects.map((p, idx) => {
-        const pTasks = tasks.filter((t) => t.projectId === p.id);
+        const pTasks = activeTasks.filter((t) => t.projectId === p.id);
         const pCompleted = pTasks.filter((t) => t.status === 'Completed').length;
         const progress = p.progress ?? (pTasks.length > 0 ? Math.round((pCompleted / pTasks.length) * 100) : (p.status === 'Completed' ? 100 : 0));
         const color: 'purple' | 'amber' | 'neutral' =
@@ -297,26 +309,9 @@ export function useAnalyticsData() {
           tooltip: `${p.name}: ${progress}% completed (${pCompleted}/${pTasks.length || p.taskCount || 0} tasks)`,
         };
       });
-
-      // If fewer than 8 bars and tasks exist, also display active/recent tasks so the chart looks balanced with real tasks
-      if (bars.length < 8 && tasks.length > 0) {
-        const recentTasks = tasks.slice(0, 8 - bars.length);
-        recentTasks.forEach((t, i) => {
-          const tProgress = t.status === 'Completed' ? 100 : t.status === 'In Progress' ? 65 : t.status === 'In Review' ? 85 : 20;
-          const tColor: 'purple' | 'amber' | 'neutral' =
-            t.status === 'Completed' ? 'purple' : t.status === 'In Progress' ? 'amber' : 'neutral';
-          bars.push({
-            id: `task-${t.id || i}`,
-            label: t.title.length > 10 ? t.title.slice(0, 8) + '…' : t.title,
-            value: Math.max(8, tProgress),
-            color: tColor,
-            tooltip: `Task: "${t.title}" (${t.status})`,
-          });
-        });
-      }
     } else {
-      // If tasks exist but no projects
-      bars = tasks.slice(0, 12).map((t, i) => {
+      // If only standalone general tasks exist without projects
+      bars = activeTasks.slice(0, 8).map((t, i) => {
         const tProgress = t.status === 'Completed' ? 100 : t.status === 'In Progress' ? 65 : 25;
         const tColor: 'purple' | 'amber' | 'neutral' =
           t.status === 'Completed' ? 'purple' : t.status === 'In Progress' ? 'amber' : 'neutral';
@@ -337,7 +332,7 @@ export function useAnalyticsData() {
       comparisonText,
       histogramBars: bars,
     };
-  }, [tasks, projects, workTimeframe]);
+  }, [activeTasks, projects, workTimeframe]);
 
   // 2. Active Duration & Running Uptime Metrics (No Dummy Dollars / Real Elapsed Time)
   const hoursLoggedMetrics: HoursLoggedMetrics = useMemo(() => {
@@ -366,9 +361,9 @@ export function useAnalyticsData() {
         comparisonText = 'No active projects currently in progress.';
       }
     } else if (hoursFilter === 'tasks') {
-      // Pick latest active task
-      const inProgressTask = tasks.find((t) => t.status === 'In Progress');
-      const latestTask = inProgressTask || tasks[tasks.length - 1];
+      // Pick latest active task among active projects
+      const inProgressTask = activeTasks.find((t) => t.status === 'In Progress');
+      const latestTask = inProgressTask || activeTasks[activeTasks.length - 1];
 
       if (latestTask) {
         targetStartDateStr = latestTask.startDate || latestTask.createdAt;
@@ -383,11 +378,11 @@ export function useAnalyticsData() {
     } else {
       // 'all'
       const activeProjectsCount = projects.filter((p) => p.status === 'In Progress').length;
-      const activeTasksCount = tasks.filter((t) => t.status === 'In Progress').length;
+      const activeTasksCount = activeTasks.filter((t) => t.status === 'In Progress').length;
 
       const allActiveDates = [
         ...projects.filter((p) => p.status === 'In Progress').map((p) => p.startDate || p.createdAt),
-        ...tasks.filter((t) => t.status === 'In Progress').map((t) => t.startDate || t.createdAt),
+        ...activeTasks.filter((t) => t.status === 'In Progress').map((t) => t.startDate || t.createdAt),
       ].filter(Boolean);
 
       if (allActiveDates.length > 0) {
@@ -464,7 +459,7 @@ export function useAnalyticsData() {
       svgArea: area,
       endpointMarker: lastPoint,
     };
-  }, [projects, tasks, hoursFilter]);
+  }, [projects, activeTasks, hoursFilter]);
 
   // 3. Project Summary Metrics (Radial Speedometer Gauge with Task-Weighted Health Tiers)
   const projectSummaryMetrics: ProjectSummaryMetrics = useMemo(() => {
@@ -485,7 +480,7 @@ export function useAnalyticsData() {
 
     // Calculate individual project completion rates (PCR) using task-weighting & deliverable milestones
     filteredProjects.forEach((p) => {
-      const pTasks = tasks.filter((t) => t.projectId === p.id);
+      const pTasks = activeTasks.filter((t) => t.projectId === p.id);
       let pcr = 0;
 
       if (pTasks.length > 0) {
@@ -567,7 +562,7 @@ export function useAnalyticsData() {
       totalProjects: total,
       gaugeTicks: ticks,
     };
-  }, [projects, tasks, projectSummaryFilter]);
+  }, [projects, activeTasks, projectSummaryFilter]);
 
   // 4. Combined Activity Feed (Seeded Items + Live Storage Events)
   const detailedActivities: DetailedActivityItem[] = useMemo(() => {
@@ -639,7 +634,7 @@ export function useAnalyticsData() {
     setProjectSummaryFilter,
     // Operations
     projects,
-    tasks,
+    tasks: activeTasks,
     teams,
     handleApproveAccess,
     handleDenyAccess,

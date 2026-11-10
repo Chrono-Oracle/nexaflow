@@ -57,14 +57,13 @@ export function LanguageSelector({ variant = 'cards' }: LanguageSelectorProps) {
               key={lang.code}
               type="button"
               onClick={() => handleLanguageChange(lang.code)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center justify-center px-3 py-1.5 rounded-lg text-base transition-all cursor-pointer ${
                 isSelected
                   ? 'bg-white text-primary-dark shadow-xs border border-primary-medium/15'
                   : 'text-primary-dark/70 hover:text-primary-dark'
               }`}
             >
               <span>{lang.flag}</span>
-              <span>{lang.badge}</span>
             </button>
           );
         })}
@@ -89,9 +88,8 @@ export function LanguageSelector({ variant = 'cards' }: LanguageSelectorProps) {
             }`}
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center font-bold text-xs text-primary-dark border border-primary-medium/20 shadow-2xs shrink-0">
-                <span className="mr-1">{lang.flag}</span>
-                <span>{lang.badge}</span>
+              <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center text-xl border border-primary-medium/20 shadow-2xs shrink-0">
+                <span>{lang.flag}</span>
               </div>
               <div>
                 <p className="text-xs sm:text-sm font-bold text-primary-dark">

@@ -56,8 +56,9 @@ export function ProjectSummaryGaugeCard({
             <span>Project Summary</span>
             <div className="group relative cursor-pointer text-primary-medium/40 hover:text-primary-dark">
               <LuCircleHelp className="w-3.5 h-3.5" />
-              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 hidden group-hover:flex px-2.5 py-1 bg-primary-dark text-white text-[11px] font-medium rounded-md shadow-lg whitespace-nowrap z-30">
-                Aggregated milestone health across all project spaces
+              <div className="absolute top-full left-0 mt-2 hidden group-hover:flex flex-col w-64 p-3 bg-primary-dark text-white text-xs font-medium rounded-xl shadow-xl z-50 leading-relaxed pointer-events-none border border-white/10">
+                <span className="font-bold text-indigo-300 mb-0.5">Project Summary</span>
+                <span className="text-white/90">A radial speedometer tracking overall project delivery health and completion rates across all workspaces.</span>
               </div>
             </div>
           </div>

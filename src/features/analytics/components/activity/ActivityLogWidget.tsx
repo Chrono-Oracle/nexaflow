@@ -132,53 +132,55 @@ export function ActivityLogWidget({
         </div>
       </div>
 
-      {/* Filter Navigation Tabs Bar */}
-      <div className="relative flex items-center gap-1 sm:gap-4 overflow-x-auto no-scrollbar pt-3 pb-2 border-b border-primary-medium/10">
-        {tabs.map((tab) => {
-          const isActive = activeTab === tab.id;
-          const TabIcon = tab.icon;
+      {/* Sticky Filter Navigation Tabs Bar */}
+      <div className="sticky top-0 z-20 -mx-5 sm:-mx-7 px-5 sm:px-7 bg-white/95 backdrop-blur-md rounded-t-2xl border-b border-primary-medium/10 shadow-2xs">
+        <div className="relative flex items-center gap-1 sm:gap-4 overflow-x-auto no-scrollbar pt-3 pb-2.5">
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            const TabIcon = tab.icon;
 
-          return (
-            <button
-              key={tab.id}
-              ref={(el) => {
-                tabRefs.current[tab.id] = el;
+            return (
+              <button
+                key={tab.id}
+                ref={(el) => {
+                  tabRefs.current[tab.id] = el;
+                }}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`relative h-9 px-2 text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1.5 shrink-0 select-none ${
+                  isActive
+                    ? 'text-primary-dark font-bold'
+                    : 'text-primary-medium/70 hover:text-primary-dark'
+                }`}
+              >
+                {TabIcon && <TabIcon className="w-3.5 h-3.5 shrink-0" />}
+                <span>{tab.label}</span>
+                {/* Fallback underline for initial SSR load before client measurement */}
+                {!isReady && isActive && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-dark rounded-full" />
+                )}
+              </button>
+            );
+          })}
+
+          {/* Single animated underline indicator: strictly X-axis translation, zero Y displacement */}
+          {isReady && (
+            <motion.div
+              initial={false}
+              animate={{
+                x: indicatorStyle.left,
+                width: indicatorStyle.width,
               }}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={`relative h-9 px-2 text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1.5 shrink-0 select-none ${
-                isActive
-                  ? 'text-primary-dark font-bold'
-                  : 'text-primary-medium/70 hover:text-primary-dark'
-              }`}
-            >
-              {TabIcon && <TabIcon className="w-3.5 h-3.5 shrink-0" />}
-              <span>{tab.label}</span>
-              {/* Fallback underline for initial SSR load before client measurement */}
-              {!isReady && isActive && (
-                <span className="absolute -bottom-[1px] left-0 right-0 h-0.5 bg-primary-dark rounded-full" />
-              )}
-            </button>
-          );
-        })}
-
-        {/* Single animated underline indicator: strictly X-axis translation, zero Y displacement */}
-        {isReady && (
-          <motion.div
-            initial={false}
-            animate={{
-              x: indicatorStyle.left,
-              width: indicatorStyle.width,
-            }}
-            transition={{
-              type: 'spring',
-              stiffness: 450,
-              damping: 35,
-              mass: 0.6,
-            }}
-            className="absolute -bottom-[1px] left-0 h-0.5 bg-primary-dark rounded-full pointer-events-none"
-          />
-        )}
+              transition={{
+                type: 'spring',
+                stiffness: 450,
+                damping: 35,
+                mass: 0.6,
+              }}
+              className="absolute bottom-0 left-0 h-0.5 bg-primary-dark rounded-full pointer-events-none"
+            />
+          )}
+        </div>
       </div>
 
       {/* Activity Timeline List */}
