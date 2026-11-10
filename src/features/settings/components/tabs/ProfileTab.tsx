@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { toast } from 'sonner';
-import { LuCamera, LuCheck } from 'react-icons/lu';
+import { LuCamera, LuCheck, LuGlobe } from 'react-icons/lu';
 import { UserProfileSettings } from '../../types/settings.types';
 import { settingsStorage, DEFAULT_PROFILE } from '../../utils/settingsStorage';
+import { LanguageSelector } from '../LanguageSelector';
 
 export function ProfileTab() {
   const [profile, setProfile] = useState<UserProfileSettings>(DEFAULT_PROFILE);
@@ -178,6 +179,20 @@ export function ProfileTab() {
             className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-primary-medium/30 hover:border-primary-medium/50 text-xs sm:text-sm text-primary-dark font-medium placeholder:text-primary-dark/40 focus:outline-none focus:ring-2 focus:ring-primary-dark/20 focus:border-primary-dark transition-all resize-none shadow-2xs"
           />
         </div>
+      </div>
+
+      {/* Language Preference */}
+      <div className="pt-2 border-t border-primary-medium/15">
+        <div className="flex items-center gap-2 mb-1">
+          <LuGlobe className="w-4 h-4 text-primary-dark" />
+          <h3 className="text-sm font-bold text-primary-dark">
+            Language Preference
+          </h3>
+        </div>
+        <p className="text-xs text-primary-dark/80 font-medium mb-3.5">
+          Select your preferred display language for the workspace.
+        </p>
+        <LanguageSelector variant="cards" />
       </div>
 
       {/* Save Button */}

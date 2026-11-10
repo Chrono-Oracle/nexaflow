@@ -6,8 +6,10 @@ import {
   LuCheck,
   LuEllipsisVertical,
   LuChevronDown,
+  LuGlobe,
 } from 'react-icons/lu';
 import { ToggleSwitch } from '../ToggleSwitch';
+import { LanguageSelector } from '../LanguageSelector';
 import {
   ThemeMode,
   TablesViewMode,
@@ -475,7 +477,30 @@ export function AppearanceTab() {
       <div className="border-b border-primary-medium/15" />
 
       {/* ============================================================ */}
-      {/* 4. Transparent sidebar */}
+      {/* 4. Display Language */}
+      {/* ============================================================ */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start py-2">
+        <div className="md:col-span-4">
+          <div className="flex items-center gap-2">
+            <LuGlobe className="w-4 h-4 text-primary-dark" />
+            <h3 className="text-sm font-bold text-primary-dark">
+              Language
+            </h3>
+          </div>
+          <p className="text-xs text-primary-dark/80 font-medium mt-0.5">
+            Select your preferred display language for the workspace.
+          </p>
+        </div>
+
+        <div className="md:col-span-8">
+          <LanguageSelector variant="cards" />
+        </div>
+      </div>
+
+      <div className="border-b border-primary-medium/15" />
+
+      {/* ============================================================ */}
+      {/* 5. Transparent sidebar */}
       {/* ============================================================ */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center py-2">
         <div className="md:col-span-4">
@@ -502,7 +527,7 @@ export function AppearanceTab() {
       <div className="border-b border-primary-medium/15" />
 
       {/* ============================================================ */}
-      {/* 5. Sidebar feature */}
+      {/* 6. Sidebar feature */}
       {/* ============================================================ */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center py-2">
         <div className="md:col-span-4">
@@ -554,7 +579,7 @@ export function AppearanceTab() {
       <div className="border-b border-primary-medium/15" />
 
       {/* ============================================================ */}
-      {/* 6. Tables view */}
+      {/* 7. Tables view */}
       {/* ============================================================ */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start py-2">
         <div className="md:col-span-4">

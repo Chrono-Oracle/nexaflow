@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   LuMessageSquare,
@@ -30,13 +30,47 @@ export function ActivityLogWidget({
   const [timeFilter, setTimeFilter] = useState<'today' | 'yesterday' | 'week'>('today');
   const [isTimeDropdownOpen, setIsTimeDropdownOpen] = useState(false);
 
-  const tabs: { id: ActivityTabFilter; label: string; icon?: React.ComponentType<{ className?: string }> }[] = [
+  // Measure tab button positions for strictly horizontal indicator translation
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number }>({
+    left: 0,
+    width: 0,
+  });
+  const [isReady, setIsReady] = useState(false);
+
+  const tabs: {
+    id: ActivityTabFilter;
+    label: string;
+    icon?: React.ComponentType<{ className?: string }>;
+  }[] = [
     { id: 'all', label: 'All' },
     { id: 'chats', label: 'Chats', icon: LuMessageSquare },
     { id: 'status', label: 'Status updates', icon: LuRefreshCw },
     { id: 'uploads', label: 'Uploads', icon: LuFileUp },
     { id: 'more', label: 'More', icon: LuEllipsis },
   ];
+
+  const updateIndicator = useCallback(() => {
+    const el = tabRefs.current[activeTab];
+    if (el) {
+      setIndicatorStyle({
+        left: el.offsetLeft,
+        width: el.offsetWidth,
+      });
+      setIsReady(true);
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    updateIndicator();
+    const rafId = requestAnimationFrame(updateIndicator);
+    return () => cancelAnimationFrame(rafId);
+  }, [updateIndicator]);
+
+  useEffect(() => {
+    window.addEventListener('resize', updateIndicator);
+    return () => window.removeEventListener('resize', updateIndicator);
+  }, [updateIndicator]);
 
   const filteredActivities = activities.filter((act) => {
     if (activeTab === 'all') return true;
@@ -99,7 +133,7 @@ export function ActivityLogWidget({
       </div>
 
       {/* Filter Navigation Tabs Bar */}
-      <div className="flex items-center gap-1 sm:gap-4 overflow-x-auto no-scrollbar pt-3 pb-4">
+      <div className="relative flex items-center gap-1 sm:gap-4 overflow-x-auto no-scrollbar pt-3 pb-2 border-b border-primary-medium/10">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           const TabIcon = tab.icon;
@@ -107,25 +141,44 @@ export function ActivityLogWidget({
           return (
             <button
               key={tab.id}
+              ref={(el) => {
+                tabRefs.current[tab.id] = el;
+              }}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`relative pb-2 px-2 text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+              className={`relative h-9 px-2 text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1.5 shrink-0 select-none ${
                 isActive
                   ? 'text-primary-dark font-bold'
                   : 'text-primary-medium/70 hover:text-primary-dark'
               }`}
             >
-              {TabIcon && <TabIcon className="w-3.5 h-3.5" />}
+              {TabIcon && <TabIcon className="w-3.5 h-3.5 shrink-0" />}
               <span>{tab.label}</span>
-              {isActive && (
-                <motion.div
-                  layoutId="activityTabUnderline"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-dark rounded-full"
-                />
+              {/* Fallback underline for initial SSR load before client measurement */}
+              {!isReady && isActive && (
+                <span className="absolute -bottom-[1px] left-0 right-0 h-0.5 bg-primary-dark rounded-full" />
               )}
             </button>
           );
         })}
+
+        {/* Single animated underline indicator: strictly X-axis translation, zero Y displacement */}
+        {isReady && (
+          <motion.div
+            initial={false}
+            animate={{
+              x: indicatorStyle.left,
+              width: indicatorStyle.width,
+            }}
+            transition={{
+              type: 'spring',
+              stiffness: 450,
+              damping: 35,
+              mass: 0.6,
+            }}
+            className="absolute -bottom-[1px] left-0 h-0.5 bg-primary-dark rounded-full pointer-events-none"
+          />
+        )}
       </div>
 
       {/* Activity Timeline List */}

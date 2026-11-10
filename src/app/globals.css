@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   interpolate-size: allow-keywords;
 
@@ -91,6 +93,14 @@
 .dark header {
   background-color: rgba(30, 24, 20, 0.85) !important;
   border-color: rgba(219, 221, 216, 0.12) !important;
+}
+
+.header-brand-text {
+  color: var(--primary-dark);
+}
+
+.dark .header-brand-text {
+  color: #f5f2ed;
 }
 
 .dark .bg-white,

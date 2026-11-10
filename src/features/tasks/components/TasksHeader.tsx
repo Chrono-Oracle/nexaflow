@@ -86,6 +86,7 @@ export function TasksHeader({
                 {isActive && (
                   <motion.div
                     layoutId="activeTaskViewTab"
+                    layout="position"
                     className="absolute -bottom-2 md:-bottom-3.5 left-2 right-2 h-0.5 bg-primary-dark rounded-full"
                     transition={{
                       type: 'spring',

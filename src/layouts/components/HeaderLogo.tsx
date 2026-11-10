@@ -29,7 +29,7 @@ export function HeaderLogo() {
           />
         )}
       </div>
-      <span className="text-lg sm:text-xl font-bold tracking-tight text-primary-dark dark:text-white">
+      <span className="text-lg sm:text-xl font-bold tracking-tight text-primary-dark dark:text-white header-brand-text">
         {t('brandName')}
       </span>
     </Link>
