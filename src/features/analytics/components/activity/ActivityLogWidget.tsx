@@ -109,7 +109,7 @@ export function ActivityLogWidget({
           </button>
 
           {isTimeDropdownOpen && (
-            <div className="absolute right-0 top-full mt-1 w-28 bg-white rounded-lg shadow-xl border border-primary-medium/20 py-1 z-30 font-elms">
+            <div className="absolute right-0 top-full mt-1 w-28 bg-white rounded-lg shadow-xl border border-primary-medium/20 py-1 z-40 font-elms">
               {(['today', 'yesterday', 'week'] as const).map((tf) => (
                 <button
                   key={tf}
@@ -133,7 +133,7 @@ export function ActivityLogWidget({
       </div>
 
       {/* Sticky Filter Navigation Tabs Bar */}
-      <div className="sticky top-0 z-20 -mx-5 sm:-mx-7 px-5 sm:px-7 bg-white/95 backdrop-blur-md rounded-t-2xl border-b border-primary-medium/10 shadow-2xs">
+      <div className="sticky top-0 z-30 -mx-5 sm:-mx-7 px-5 sm:px-7 bg-white rounded-t-2xl border-b border-primary-medium/10 shadow-xs">
         <div className="relative flex items-center gap-1 sm:gap-4 overflow-x-auto no-scrollbar pt-3 pb-2.5">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
@@ -183,8 +183,8 @@ export function ActivityLogWidget({
         </div>
       </div>
 
-      {/* Activity Timeline List */}
-      <div className="pt-4">
+      {/* Activity Timeline List (Isolated stacking context to ensure all contents scroll strictly behind the sticky nav bar) */}
+      <div className="pt-4 relative z-0 isolate">
         {filteredActivities.length === 0 ? (
           <div className="py-12 text-center text-xs sm:text-sm text-primary-medium/60">
             No activities recorded in this category.

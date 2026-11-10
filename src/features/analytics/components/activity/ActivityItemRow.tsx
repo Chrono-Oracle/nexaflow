@@ -77,7 +77,7 @@ export function ActivityItemRow({
 
       {/* Timeline Node Badge Icon */}
       <div
-        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 z-10 transition-transform group-hover:scale-105 ${nodeBg}`}
+        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 z-[1] transition-transform group-hover:scale-105 ${nodeBg}`}
       >
         <NodeIcon className="w-3.5 h-3.5" />
       </div>

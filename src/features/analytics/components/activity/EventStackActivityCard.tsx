@@ -25,12 +25,12 @@ export function EventStackActivityCard({ activity }: EventStackActivityCardProps
       {/* Layered Card Deck Effect matching uploaded screenshot */}
       <div className="relative max-w-md pt-1 pb-2">
         {/* Underneath layer 2 */}
-        <div className="absolute inset-x-3 -bottom-1.5 h-6 bg-white/60 border border-neutral-200/60 rounded-xl shadow-2xs z-0" />
+        <div className="absolute inset-x-3 -bottom-1.5 h-6 bg-white/60 border border-neutral-200/60 rounded-xl shadow-2xs z-[1]" />
         {/* Underneath layer 1 */}
-        <div className="absolute inset-x-1.5 -bottom-0.5 h-6 bg-white/80 border border-neutral-200/80 rounded-xl shadow-2xs z-10" />
+        <div className="absolute inset-x-1.5 -bottom-0.5 h-6 bg-white/80 border border-neutral-200/80 rounded-xl shadow-2xs z-[2]" />
 
         {/* Top Active Event Card */}
-        <div className="relative z-20 bg-white border border-neutral-200/90 rounded-xl p-3.5 sm:p-4 shadow-xs flex items-center justify-between gap-3">
+        <div className="relative z-[3] bg-white border border-neutral-200/90 rounded-xl p-3.5 sm:p-4 shadow-xs flex items-center justify-between gap-3">
           <div className="flex items-center gap-3.5 min-w-0">
             {/* Calendar Date Badge */}
             <div className="w-11 h-11 rounded-lg border border-neutral-200 bg-neutral-50 overflow-hidden flex flex-col items-center justify-center shrink-0">
