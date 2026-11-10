@@ -20,6 +20,7 @@ import {
 } from '@/features/projects/utils/badgeStyles';
 import { stripHtmlToPlainText } from '@/features/projects/utils/htmlSanitizer';
 import { ProjectDetailModal } from '@/features/projects/components/ProjectDetailModal';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 import { getAuthUsers } from '@/data/users';
 
 interface AsideProjectCardProps {
@@ -474,19 +475,14 @@ export function AsideProjectCard({ onCreateProject }: AsideProjectCardProps) {
               ) : (
                 <>
                   {memberAvatars.slice(0, 3).map((user) => (
-                    <div
+                    <UserAvatar
                       key={user.id}
-                      className="relative w-7 h-7 rounded-full overflow-hidden border-2 border-white shadow-2xs"
+                      src={user.avatar}
+                      name={user.name}
+                      size="md"
+                      className="border-2 border-white shadow-2xs"
                       title={`${user.name} • ${user.role || 'Member'}`}
-                    >
-                      <Image
-                        src={user.avatar}
-                        alt={user.name}
-                        fill
-                        sizes="28px"
-                        className="object-cover"
-                      />
-                    </div>
+                    />
                   ))}
                   {memberAvatars.length > 3 && (
                     <div

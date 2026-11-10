@@ -38,6 +38,7 @@ import {
   ProjectAssignedMember,
 } from '../types/project.types';
 import { getCurrentUser } from '@/data/users';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 import {
   useUpdateProjectMutation,
   useDeleteProjectMutation,
@@ -1041,15 +1042,12 @@ export function ProjectDetailModal({
                                   className="inline-flex items-center gap-1.5 min-w-0"
                                   title={member.name}
                                 >
-                                  <div className="relative w-5 h-5 rounded-full overflow-hidden shrink-0 border border-primary-medium/15">
-                                    <Image
-                                      src={member.avatar || '/Avatar.jpg'}
-                                      alt={member.name}
-                                      fill
-                                      className="object-cover"
-                                      sizes="20px"
-                                    />
-                                  </div>
+                                  <UserAvatar
+                                    src={member.avatar}
+                                    name={member.name}
+                                    size="xs"
+                                    className="border border-primary-medium/15 shadow-2xs"
+                                  />
                                   <span className="text-xs font-semibold text-primary-dark truncate">
                                     {member.name}
                                   </span>
@@ -1072,15 +1070,12 @@ export function ProjectDetailModal({
                                   className="inline-flex items-center gap-1.5 min-w-0"
                                   title={member.name}
                                 >
-                                  <div className="relative w-5 h-5 rounded-full overflow-hidden shrink-0 border border-primary-medium/15">
-                                    <Image
-                                      src={member.avatar || '/Avatar.jpg'}
-                                      alt={member.name}
-                                      fill
-                                      className="object-cover"
-                                      sizes="20px"
-                                    />
-                                  </div>
+                                  <UserAvatar
+                                    src={member.avatar}
+                                    name={member.name}
+                                    size="xs"
+                                    className="border border-primary-medium/15 shadow-2xs"
+                                  />
                                   <span className="text-xs font-semibold text-primary-dark truncate">
                                     {member.name}
                                   </span>
@@ -1509,15 +1504,12 @@ export function ProjectDetailModal({
                             key={comm.id}
                             className="flex items-start gap-3 p-3 rounded-xl bg-primary-surface/20 border border-primary-medium/10"
                           >
-                            <div className="relative w-6 h-6 rounded-full overflow-hidden shrink-0 mt-0.5 border border-primary-medium/15">
-                              <Image
-                                src={comm.userAvatar || '/Avatar.jpg'}
-                                alt={comm.userName}
-                                fill
-                                className="object-cover"
-                                sizes="24px"
-                              />
-                            </div>
+                            <UserAvatar
+                              src={comm.userAvatar}
+                              name={comm.userName}
+                              size="sm"
+                              className="mt-0.5 border border-primary-medium/15 shadow-2xs"
+                            />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between">
                                 <span className="text-xs font-bold text-primary-dark">
@@ -1541,15 +1533,12 @@ export function ProjectDetailModal({
 
                     {/* New Comment Input Box */}
                     <div className="flex items-center gap-2 pt-2 border-t border-primary-medium/10">
-                      <div className="relative w-6 h-6 rounded-full overflow-hidden shrink-0 border border-primary-medium/15">
-                        <Image
-                          src={currentUser.avatar || '/Avatar.jpg'}
-                          alt={currentUser.fullName}
-                          fill
-                          className="object-cover"
-                          sizes="24px"
-                        />
-                      </div>
+                      <UserAvatar
+                        src={currentUser.avatar}
+                        name={currentUser.fullName}
+                        size="sm"
+                        className="border border-primary-medium/15 shadow-2xs"
+                      />
                       <input
                         type="text"
                         value={commentText}
@@ -1748,15 +1737,12 @@ export function ProjectDetailModal({
                   {t('createdBy')}
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="relative w-6 h-6 rounded-full overflow-hidden shrink-0 border border-primary-medium/15">
-                    <Image
-                      src={project.manager?.avatar || currentUser.avatar || '/Avatar.jpg'}
-                      alt={project.manager?.name || currentUser.fullName}
-                      fill
-                      className="object-cover"
-                      sizes="24px"
-                    />
-                  </div>
+                  <UserAvatar
+                    src={project.manager?.avatar || currentUser.avatar}
+                    name={project.manager?.name || currentUser.fullName}
+                    size="sm"
+                    className="border border-primary-medium/15 shadow-2xs"
+                  />
                   <span className="text-xs font-bold text-primary-dark">
                     {project.manager?.name || currentUser.fullName}
                   </span>
