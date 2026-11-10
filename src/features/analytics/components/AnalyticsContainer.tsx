@@ -34,45 +34,57 @@ export function AnalyticsContainer() {
   };
 
   return (
-    <div className="w-full space-y-6 pb-16 font-elms">
-      {/* Header */}
-      <AnalyticsHeader onRefresh={handleRefresh} />
-
-      {/* Top 3 Interactive Metric & Chart Cards (matching uploaded UI) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        <WorkCompletedChartCard
-          metrics={workCompletedMetrics}
-          timeframe={workTimeframe}
-          onTimeframeChange={setWorkTimeframe}
-        />
-        <HoursLoggedChartCard
-          metrics={hoursLoggedMetrics}
-          filter={hoursFilter}
-          onFilterChange={setHoursFilter}
-        />
-        <ProjectSummaryGaugeCard
-          metrics={projectSummaryMetrics}
-          filter={projectSummaryFilter}
-          onFilterChange={setProjectSummaryFilter}
-        />
+    <div className="font-elms w-full flex flex-col lg:h-full min-h-0">
+      {/* Top Header Section */}
+      <div className="shrink-0 mb-4 sm:mb-5">
+        <AnalyticsHeader onRefresh={handleRefresh} />
       </div>
 
-      {/* Middle Operations & Telemetry Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2">
+      {/* Main Dashboard: Two-Section Layout matching HomePage */}
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start lg:items-stretch">
+        {/* Left Section: Operational Telemetry & Activity Feed */}
+        <section
+          aria-label="Analytics Overview"
+          className="lg:col-span-8 xl:col-span-8 space-y-6 lg:h-full lg:max-h-full lg:min-h-0 lg:overflow-y-auto overscroll-y-contain lg:pr-2 custom-scrollbar pb-6"
+        >
+          {/* Top Row: Work Completed & Active Duration side by side */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <WorkCompletedChartCard
+              metrics={workCompletedMetrics}
+              timeframe={workTimeframe}
+              onTimeframeChange={setWorkTimeframe}
+            />
+            <HoursLoggedChartCard
+              metrics={hoursLoggedMetrics}
+              filter={hoursFilter}
+              onFilterChange={setHoursFilter}
+            />
+          </div>
+
+          {/* Operational Throughput */}
           <OperationsOverviewCard projects={projects} tasks={tasks} />
-        </div>
-        <div className="lg:col-span-1">
-          <TeamWorkloadWidget teams={teams} tasks={tasks} />
-        </div>
-      </div>
 
-      {/* Detailed Activity Log Feed (matching uploaded UI) */}
-      <ActivityLogWidget
-        activities={detailedActivities}
-        onApproveAccess={handleApproveAccess}
-        onDenyAccess={handleDenyAccess}
-      />
+          {/* Activity Log Feed */}
+          <ActivityLogWidget
+            activities={detailedActivities}
+            onApproveAccess={handleApproveAccess}
+            onDenyAccess={handleDenyAccess}
+          />
+        </section>
+
+        {/* Right Section: Project Summary & Team Capacity */}
+        <aside
+          aria-label="Analytics Aside"
+          className="lg:col-span-4 xl:col-span-4 space-y-6 lg:h-full lg:max-h-full lg:min-h-0 lg:overflow-y-auto overscroll-y-contain lg:pr-1 custom-scrollbar pb-6"
+        >
+          <ProjectSummaryGaugeCard
+            metrics={projectSummaryMetrics}
+            filter={projectSummaryFilter}
+            onFilterChange={setProjectSummaryFilter}
+          />
+          <TeamWorkloadWidget teams={teams} tasks={tasks} />
+        </aside>
+      </div>
     </div>
   );
 }

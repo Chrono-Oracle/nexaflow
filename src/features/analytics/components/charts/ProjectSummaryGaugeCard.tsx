@@ -25,17 +25,22 @@ export function ProjectSummaryGaugeCard({
     completed: 'Done',
   };
 
-  const getTickFill = (status: 'completed' | 'in-progress' | 'early') => {
+  const getTickFill = (status: 'completed' | 'in-progress' | 'early' | 'empty') => {
     switch (status) {
       case 'completed':
-        return '#8B5CF6'; // Purple
+        return '#8B5CF6'; // Purple (100%)
       case 'in-progress':
-        return '#5EEAD4'; // Mint / Teal
+        return '#5EEAD4'; // Mint / Teal (>50%)
       case 'early':
+        return '#FCD34D'; // Yellow / Amber (<50%)
+      case 'empty':
       default:
-        return '#FCD34D'; // Yellow / Amber
+        return '#E5E7EB'; // Neutral grey for zero / inactive
     }
   };
+
+  // Find hovered tick if any
+  const hoveredTick = metrics.gaugeTicks.find((t) => t.id === hoveredTickId);
 
   // Center coordinates and radius for the gauge
   const cx = 150;
@@ -98,12 +103,16 @@ export function ProjectSummaryGaugeCard({
         <svg
           viewBox="0 0 300 155"
           className="w-full max-w-[280px] h-auto overflow-visible select-none"
+          suppressHydrationWarning
         >
           {metrics.gaugeTicks.map((tick) => {
             const rad = (tick.angle * Math.PI) / 180;
-            const x = cx + radius * Math.cos(rad);
-            const y = cy - radius * Math.sin(rad);
-            const rotation = 90 - tick.angle;
+            // Round coordinates to fixed 2 decimal places to prevent float precision SSR/client hydration drift
+            const x = Number((cx + radius * Math.cos(rad)).toFixed(2));
+            const y = Number((cy - radius * Math.sin(rad)).toFixed(2));
+            const rotation = Number((90 - tick.angle).toFixed(2));
+            const rectX = Number((x - 2.5).toFixed(2));
+            const rectY = Number((y - 8).toFixed(2));
             const isHovered = hoveredTickId === tick.id;
 
             return (
@@ -117,14 +126,15 @@ export function ProjectSummaryGaugeCard({
                 className="cursor-pointer"
               >
                 <rect
-                  x={x - 2.5}
-                  y={y - 8}
+                  x={rectX}
+                  y={rectY}
                   width="5"
                   height="16"
                   rx="2.5"
                   fill={getTickFill(tick.status)}
                   transform={`rotate(${rotation} ${x} ${y})`}
                   className="transition-colors hover:opacity-90"
+                  suppressHydrationWarning
                 />
               </motion.g>
             );
@@ -132,9 +142,9 @@ export function ProjectSummaryGaugeCard({
         </svg>
 
         {/* Center Text inside Arc */}
-        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 text-center pointer-events-none">
-          <p className="text-[11px] font-semibold text-primary-medium/70">
-            Project Completion
+        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 text-center pointer-events-none w-48">
+          <p className="text-[11px] font-semibold text-primary-medium/70 truncate transition-colors">
+            {hoveredTick?.tooltip || 'Project Completion'}
           </p>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-primary-dark tracking-tight leading-none mt-1">
             {metrics.averageCompletionRate}%
@@ -142,19 +152,19 @@ export function ProjectSummaryGaugeCard({
         </div>
       </div>
 
-      {/* Bottom Color Legends matching uploaded image */}
+      {/* Bottom Color Legends with reactive project tier counts */}
       <div className="pt-3 border-t border-primary-medium/10 flex items-center justify-center gap-4 text-xs font-semibold text-primary-medium/80 flex-wrap">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5" title={`${metrics.completedCount} completed projects (100%)`}>
           <span className="w-2.5 h-2.5 rounded-full bg-[#8B5CF6]" />
-          <span>100%</span>
+          <span>100% {metrics.totalProjects > 0 ? `(${metrics.completedCount})` : ''}</span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5" title={`${metrics.inProgressCount} projects well underway (>50%)`}>
           <span className="w-2.5 h-2.5 rounded-full bg-[#5EEAD4]" />
-          <span>&gt;50%</span>
+          <span>&gt;50% {metrics.totalProjects > 0 ? `(${metrics.inProgressCount})` : ''}</span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5" title={`${metrics.earlyCount} projects in early stages (<50%)`}>
           <span className="w-2.5 h-2.5 rounded-full bg-[#FCD34D]" />
-          <span>&lt;50%</span>
+          <span>&lt;50% {metrics.totalProjects > 0 ? `(${metrics.earlyCount})` : ''}</span>
         </div>
       </div>
     </div>

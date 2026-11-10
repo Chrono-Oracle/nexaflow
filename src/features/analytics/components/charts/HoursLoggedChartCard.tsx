@@ -3,12 +3,12 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { LuCircleHelp, LuChevronDown } from 'react-icons/lu';
-import { HoursLoggedMetrics } from '../../types/analytics.types';
+import { HoursLoggedMetrics, DurationFilter } from '../../types/analytics.types';
 
 interface HoursLoggedChartCardProps {
   metrics: HoursLoggedMetrics;
-  filter: 'projects' | 'tasks' | 'team';
-  onFilterChange: (filter: 'projects' | 'tasks' | 'team') => void;
+  filter: DurationFilter;
+  onFilterChange: (filter: DurationFilter) => void;
 }
 
 export function HoursLoggedChartCard({
@@ -19,21 +19,15 @@ export function HoursLoggedChartCard({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [hoveredPointIndex, setHoveredPointIndex] = useState<number | null>(null);
 
-  const filterLabels: Record<'projects' | 'tasks' | 'team', string> = {
-    projects: 'Projects',
-    tasks: 'All Tasks',
-    team: 'Core Team',
+  const filterLabels: Record<DurationFilter, string> = {
+    projects: 'Latest Project',
+    tasks: 'Latest Task',
+    all: 'All Active',
   };
 
   // SVG dimensions for wave chart
   const width = 340;
   const height = 90;
-
-  // Path data for smooth wave chart
-  const pathData =
-    'M 0,72 C 30,72 50,28 80,26 C 120,24 150,56 190,58 C 230,60 260,34 300,28 C 320,24 330,16 340,14';
-
-  const areaData = `${pathData} L 340,90 L 0,90 Z`;
 
   return (
     <div className="bg-white rounded-2xl border border-primary-medium/15 p-5 sm:p-6 shadow-xs hover:shadow-md transition-all flex flex-col justify-between font-elms relative overflow-hidden">
@@ -41,11 +35,11 @@ export function HoursLoggedChartCard({
       <div>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-primary-dark">
-            <span>Hours Logged</span>
+            <span>Active Duration</span>
             <div className="group relative cursor-pointer text-primary-medium/40 hover:text-primary-dark">
               <LuCircleHelp className="w-3.5 h-3.5" />
               <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 hidden group-hover:flex px-2.5 py-1 bg-primary-dark text-white text-[11px] font-medium rounded-md shadow-lg whitespace-nowrap z-30">
-                Tracked hours and valuation across operations
+                Elapsed running time of your latest project or active tasks
               </div>
             </div>
           </div>
@@ -62,8 +56,8 @@ export function HoursLoggedChartCard({
             </button>
 
             {isDropdownOpen && (
-              <div className="absolute right-0 top-full mt-1 w-28 bg-white rounded-lg shadow-xl border border-primary-medium/20 py-1 z-30 font-elms">
-                {(['projects', 'tasks', 'team'] as const).map((f) => (
+              <div className="absolute right-0 top-full mt-1 w-32 bg-white rounded-lg shadow-xl border border-primary-medium/20 py-1 z-30 font-elms">
+                {(['projects', 'tasks', 'all'] as const).map((f) => (
                   <button
                     key={f}
                     type="button"
@@ -85,23 +79,31 @@ export function HoursLoggedChartCard({
           </div>
         </div>
 
-        {/* Big Metric + Currency Valuation */}
-        <div className="mt-4 flex items-baseline gap-2.5 flex-wrap">
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-primary-dark tracking-tight">
+        {/* Big Metric + Live Status Badge (No dollars) */}
+        <div className="mt-4 flex items-center gap-2.5 flex-wrap">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-primary-dark tracking-tight" suppressHydrationWarning>
+            {metrics.days > 0 ? `${metrics.days}d ` : ''}
             {metrics.hours}h {metrics.minutes}m
           </h2>
-          <span className="text-xs sm:text-sm font-semibold text-primary-medium/60">
-            ≈ ${metrics.monetaryValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-          </span>
+          {metrics.statusBadge.variant === 'active' ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/50">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              {metrics.statusBadge.label}
+            </span>
+          ) : metrics.statusBadge.variant === 'completed' ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200/50">
+              {metrics.statusBadge.label}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-600 border border-neutral-200/50">
+              {metrics.statusBadge.label}
+            </span>
+          )}
         </div>
 
-        {/* Subtitle with green pill badge */}
-        <p className="text-xs text-primary-medium/70 mt-1 flex items-center gap-1.5 flex-wrap">
-          <span>it&apos;s paid</span>
-          <span className="inline-flex items-center px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 font-bold text-[11px] border border-emerald-200/50">
-            {metrics.trendPercentage}%
-          </span>
-          <span>higher than the previous project.</span>
+        {/* Clean Contextual Subtitle */}
+        <p className="text-xs text-primary-medium/70 mt-1 truncate" title={metrics.comparisonText}>
+          {metrics.comparisonText}
         </p>
       </div>
 
@@ -112,6 +114,7 @@ export function HoursLoggedChartCard({
             viewBox={`0 0 ${width} ${height}`}
             className="w-full h-full overflow-visible"
             preserveAspectRatio="none"
+            suppressHydrationWarning
           >
             <defs>
               <linearGradient id="hoursWaveGradient" x1="0" y1="0" x2="0" y2="1">
@@ -123,7 +126,7 @@ export function HoursLoggedChartCard({
 
             {/* Filled Gradient Area */}
             <motion.path
-              d={areaData}
+              d={metrics.svgArea}
               fill="url(#hoursWaveGradient)"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -132,7 +135,7 @@ export function HoursLoggedChartCard({
 
             {/* Smooth Stroke Curve */}
             <motion.path
-              d={pathData}
+              d={metrics.svgPath}
               fill="none"
               stroke="#8B5CF6"
               strokeWidth="2.5"
@@ -144,8 +147,8 @@ export function HoursLoggedChartCard({
 
             {/* Highlighted Endpoint Marker (matching the ring on uploaded image) */}
             <circle
-              cx="340"
-              cy="14"
+              cx={metrics.endpointMarker?.x ?? width}
+              cy={metrics.endpointMarker?.y ?? 76}
               r="4.5"
               fill="#FFFFFF"
               stroke="#8B5CF6"
@@ -158,14 +161,14 @@ export function HoursLoggedChartCard({
           <div className="absolute inset-0 flex items-center justify-between px-2 pointer-events-none">
             {metrics.wavePoints.map((pt, idx) => (
               <div
-                key={pt.label}
+                key={`${pt.label}-${idx}`}
                 className="pointer-events-auto h-full flex flex-col justify-end items-center relative group cursor-pointer"
                 onMouseEnter={() => setHoveredPointIndex(idx)}
                 onMouseLeave={() => setHoveredPointIndex(null)}
               >
                 {hoveredPointIndex === idx && (
-                  <div className="absolute bottom-full mb-1 bg-primary-dark text-white text-[10px] font-semibold px-2 py-0.5 rounded shadow whitespace-nowrap z-30">
-                    {pt.label}: {pt.hours}h logged
+                  <div className="absolute bottom-full mb-1 bg-primary-dark text-white text-[10px] font-semibold px-2 py-0.5 rounded shadow whitespace-nowrap z-30 pointer-events-none">
+                    {pt.tooltip}
                   </div>
                 )}
                 <div className="w-2 h-2 rounded-full opacity-0 group-hover:opacity-100 bg-[#8B5CF6] transition-opacity" />

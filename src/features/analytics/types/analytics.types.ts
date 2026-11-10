@@ -1,10 +1,7 @@
-import { Project } from '@/features/projects/types/project.types';
-import { Task } from '@/features/tasks/types/task.types';
-import { Team } from '@/features/team/types/team.types';
-
 export type TimeframeFilter = 'today' | 'week' | 'month' | 'all';
 export type ProjectFilter = 'all' | 'active' | 'completed';
 export type ActivityTabFilter = 'all' | 'chats' | 'status' | 'uploads' | 'more';
+export type DurationFilter = 'projects' | 'tasks' | 'all';
 
 export interface WorkCompletedMetrics {
   rate: number; // e.g. 92%
@@ -20,25 +17,46 @@ export interface WorkCompletedMetrics {
   }[];
 }
 
-export interface HoursLoggedMetrics {
+export interface ActiveDurationMetrics {
+  days: number;
   hours: number;
   minutes: number;
-  monetaryValue: number; // e.g. 7279.00
-  trendPercentage: number; // e.g. 18
+  statusBadge: {
+    label: string;
+    variant: 'active' | 'completed' | 'idle';
+  };
+  targetName: string;
   comparisonText: string;
-  wavePoints: { x: number; y: number; label: string; hours: number }[];
+  wavePoints: {
+    x: number;
+    y: number;
+    label: string;
+    hours: number;
+    tooltip: string;
+  }[];
+  svgPath: string;
+  svgArea: string;
+  endpointMarker: { x: number; y: number };
+  monetaryValue?: number;
+  trendPercentage?: number;
 }
+
+export type HoursLoggedMetrics = ActiveDurationMetrics;
 
 export interface ProjectSummaryMetrics {
   averageCompletionRate: number; // e.g. 55%
-  completedRatio: number; // 100%
-  inProgressRatio: number; // >50%
-  earlyRatio: number; // <50%
+  completedCount: number; // Projects at 100%
+  inProgressCount: number; // Projects > 50%
+  earlyCount: number; // Projects < 50%
+  completedRatio: number; // percentage
+  inProgressRatio: number; // percentage
+  earlyRatio: number; // percentage
   totalProjects: number;
   gaugeTicks: {
     id: number;
     angle: number;
-    status: 'completed' | 'in-progress' | 'early';
+    status: 'completed' | 'in-progress' | 'early' | 'empty';
+    tooltip?: string;
   }[];
 }
 

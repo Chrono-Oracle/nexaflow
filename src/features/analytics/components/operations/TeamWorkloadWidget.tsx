@@ -1,7 +1,7 @@
 'use client';
 
 import { toast } from 'sonner';
-import { LuUsers, LuShare2, LuDownload, LuActivity } from 'react-icons/lu';
+import { LuDownload, LuActivity } from 'react-icons/lu';
 import { Team } from '@/features/team/types/team.types';
 import { Task } from '@/features/tasks/types/task.types';
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { LuExternalLink, LuCornerDownRight, LuMessageSquare } from 'react-icons/lu';
+import { LuExternalLink, LuCornerDownRight } from 'react-icons/lu';
 import { DetailedActivityItem } from '../../types/analytics.types';
 
 interface MentionActivityCardProps {

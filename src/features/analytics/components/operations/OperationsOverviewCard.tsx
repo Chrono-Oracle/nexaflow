@@ -3,7 +3,6 @@
 import { useMemo } from 'react';
 import { Project } from '@/features/projects/types/project.types';
 import { Task } from '@/features/tasks/types/task.types';
-import { LuLayers } from 'react-icons/lu';
 
 interface OperationsOverviewCardProps {
   projects: Project[];

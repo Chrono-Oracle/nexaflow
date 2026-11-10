@@ -15,7 +15,45 @@ import {
   DetailedActivityItem,
   TimeframeFilter,
   ProjectFilter,
+  DurationFilter,
 } from '../types/analytics.types';
+
+// Helper to generate smooth Catmull-Rom cubic bezier SVG wave path from data points
+function computeWavePath(points: { val: number }[], width = 340, height = 90, padY = 14) {
+  if (!points || points.length === 0) {
+    return {
+      path: `M 0,${height - padY} L ${width},${height - padY}`,
+      area: `M 0,${height - padY} L ${width},${height - padY} L ${width},${height} L 0,${height} Z`,
+      lastPoint: { x: width, y: height - padY },
+    };
+  }
+
+  const n = points.length;
+  const coords = points.map((p, i) => {
+    const x = Number(((i / (n - 1)) * width).toFixed(1));
+    const normalizedVal = Math.min(100, Math.max(0, p.val));
+    const y = Number((height - padY - (normalizedVal / 100) * (height - 2 * padY)).toFixed(1));
+    return { x, y };
+  });
+
+  let path = `M ${coords[0].x},${coords[0].y}`;
+  for (let i = 0; i < n - 1; i++) {
+    const p0 = coords[i === 0 ? 0 : i - 1];
+    const p1 = coords[i];
+    const p2 = coords[i + 1];
+    const p3 = coords[i + 2 < n ? i + 2 : i + 1];
+
+    const cp1x = Number((p1.x + (p2.x - p0.x) / 6).toFixed(1));
+    const cp1y = Number((p1.y + (p2.y - p0.y) / 6).toFixed(1));
+    const cp2x = Number((p2.x - (p3.x - p1.x) / 6).toFixed(1));
+    const cp2y = Number((p2.y - (p3.y - p1.y) / 6).toFixed(1));
+
+    path += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+  }
+
+  const area = `${path} L ${width},${height} L 0,${height} Z`;
+  return { path, area, lastPoint: coords[coords.length - 1] };
+}
 
 // Pre-seeded rich activity log items matching the uploaded UI
 const SEEDED_ACTIVITIES: DetailedActivityItem[] = [
@@ -161,147 +199,375 @@ export function useAnalyticsData() {
 
   // Filter selections
   const [workTimeframe, setWorkTimeframe] = useState<TimeframeFilter>('today');
-  const [hoursFilter, setHoursFilter] = useState<'projects' | 'tasks' | 'team'>('projects');
+  const [hoursFilter, setHoursFilter] = useState<DurationFilter>('projects');
   const [projectSummaryFilter, setProjectSummaryFilter] = useState<ProjectFilter>('all');
   const [activityAccessState, setActivityAccessState] = useState<Record<string, 'pending' | 'approved' | 'denied'>>({
     'act-access-2': 'pending',
   });
 
-  // 1. Work Completed Metrics (Histogram Bar Chart)
+  // 1. Work Completed Metrics (Real Projects & Tasks - No Dummy Sprints)
   const workCompletedMetrics: WorkCompletedMetrics = useMemo(() => {
-    const totalTasksCount = tasks.length;
-    const completedTasksCount = tasks.filter((t) => t.status === 'Completed').length;
-    
-    // Baseline rate: if tasks exist calculate percentage, otherwise match uploaded screenshot 92%
-    const rate = totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 92;
-    const projectCount = projects.length > 0 ? projects.length : 30;
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7)).getTime(); // Monday
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
-    // Generate 26 histogram bars matching the uploaded graphic rhythm:
-    // First segment purple, middle segment amber/gold, third segment light neutral
-    const bars = [
-      { id: 'b1', label: '09:00', value: 85, color: 'purple' as const, tooltip: 'Sprint A: 85% tasks done' },
-      { id: 'b2', label: '09:30', value: 35, color: 'purple' as const, tooltip: 'Sprint A: 35% tasks done' },
-      { id: 'b3', label: '10:00', value: 92, color: 'purple' as const, tooltip: 'Sprint A: 92% tasks done' },
-      { id: 'b4', label: '10:30', value: 70, color: 'purple' as const, tooltip: 'Sprint A: 70% tasks done' },
-      { id: 'b5', label: '11:00', value: 95, color: 'purple' as const, tooltip: 'Sprint A: 95% tasks done' },
-      { id: 'b6', label: '11:30', value: 80, color: 'purple' as const, tooltip: 'Sprint A: 80% tasks done' },
-      { id: 'b7', label: '12:00', value: 45, color: 'purple' as const, tooltip: 'Sprint A: 45% tasks done' },
-      { id: 'b8', label: '12:30', value: 88, color: 'purple' as const, tooltip: 'Sprint A: 88% tasks done' },
-      { id: 'b9', label: '13:00', value: 90, color: 'purple' as const, tooltip: 'Sprint A: 90% tasks done' },
-      { id: 'b10', label: '13:30', value: 30, color: 'purple' as const, tooltip: 'Sprint A: 30% tasks done' },
-      // Amber segment
-      { id: 'b11', label: '14:00', value: 65, color: 'amber' as const, tooltip: 'Sprint B: 65% in progress' },
-      { id: 'b12', label: '14:30', value: 40, color: 'amber' as const, tooltip: 'Sprint B: 40% in progress' },
-      { id: 'b13', label: '15:00', value: 75, color: 'amber' as const, tooltip: 'Sprint B: 75% in progress' },
-      { id: 'b14', label: '15:30', value: 85, color: 'amber' as const, tooltip: 'Sprint B: 85% in progress' },
-      { id: 'b15', label: '16:00', value: 90, color: 'amber' as const, tooltip: 'Sprint B: 90% in progress' },
-      { id: 'b16', label: '16:30', value: 78, color: 'amber' as const, tooltip: 'Sprint B: 78% in progress' },
-      { id: 'b17', label: '17:00', value: 35, color: 'amber' as const, tooltip: 'Sprint B: 35% in progress' },
-      // Neutral segment
-      { id: 'b18', label: '17:30', value: 60, color: 'neutral' as const, tooltip: 'Queue: 60% scheduled' },
-      { id: 'b19', label: '18:00', value: 45, color: 'neutral' as const, tooltip: 'Queue: 45% scheduled' },
-      { id: 'b20', label: '18:30', value: 50, color: 'neutral' as const, tooltip: 'Queue: 50% scheduled' },
-      { id: 'b21', label: '19:00', value: 72, color: 'neutral' as const, tooltip: 'Queue: 72% scheduled' },
-      { id: 'b22', label: '19:30', value: 30, color: 'neutral' as const, tooltip: 'Queue: 30% scheduled' },
-      { id: 'b23', label: '20:00', value: 55, color: 'neutral' as const, tooltip: 'Queue: 55% scheduled' },
-      { id: 'b24', label: '20:30', value: 40, color: 'neutral' as const, tooltip: 'Queue: 40% scheduled' },
-    ];
+    const isTaskInPeriod = (t: typeof tasks[0]) => {
+      if (workTimeframe === 'all') return true;
+      const dateStr = t.createdAt || t.startDate;
+      if (!dateStr) return true;
+      const tMs = new Date(dateStr).getTime();
+      if (isNaN(tMs)) return true;
+      if (workTimeframe === 'today') return tMs >= startOfToday;
+      if (workTimeframe === 'week') return tMs >= startOfWeek;
+      if (workTimeframe === 'month') return tMs >= startOfMonth;
+      return true;
+    };
+
+    const periodTasks = tasks.filter(isTaskInPeriod);
+    const totalTasksCount = periodTasks.length;
+    const completedTasksCount = periodTasks.filter((t) => t.status === 'Completed').length;
+    const totalProjects = projects.length;
+
+    let rate = 0;
+    let comparisonText = '';
+
+    if (totalTasksCount > 0) {
+      rate = Math.round((completedTasksCount / totalTasksCount) * 100);
+      comparisonText = `${completedTasksCount} of ${totalTasksCount} tasks completed across ${totalProjects} ${totalProjects === 1 ? 'project' : 'projects'}.`;
+    } else if (totalProjects > 0) {
+      const completedProjects = projects.filter((p) => p.status === 'Completed').length;
+      rate = Math.round(projects.reduce((acc, p) => acc + (p.progress ?? 0), 0) / totalProjects);
+      comparisonText = `${completedProjects} of ${totalProjects} projects completed (${totalProjects - completedProjects} active).`;
+    } else {
+      rate = 0;
+      comparisonText = 'No tasks or projects logged yet for this period.';
+    }
+
+    // Dynamic Histogram Bars (Real projects & tasks - no dummy sprints)
+    let bars: {
+      id: string;
+      label: string;
+      value: number;
+      color: 'purple' | 'amber' | 'neutral';
+      tooltip: string;
+    }[] = [];
+
+    if (totalProjects === 0 && tasks.length === 0) {
+      bars = Array.from({ length: 12 }, (_, i) => ({
+        id: `empty-${i}`,
+        label: '--',
+        value: 6,
+        color: 'neutral' as const,
+        tooltip: 'No activity recorded yet',
+      }));
+    } else if (workTimeframe === 'week') {
+      const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      bars = dayNames.map((name, i) => {
+        const d = new Date(startOfWeek + i * 24 * 3600 * 1000);
+        const dStr = d.toISOString().split('T')[0];
+        const dayTasks = tasks.filter((t) => {
+          const tDate = t.createdAt?.split('T')[0] || t.startDate;
+          return tDate === dStr;
+        });
+        const dayCompleted = dayTasks.filter((t) => t.status === 'Completed').length;
+        const dayRate = dayTasks.length > 0 ? Math.round((dayCompleted / dayTasks.length) * 100) : 0;
+        const color: 'purple' | 'amber' | 'neutral' =
+          dayCompleted > 0 ? 'purple' : dayTasks.length > 0 ? 'amber' : 'neutral';
+        return {
+          id: `day-${name}-${i}`,
+          label: name,
+          value: Math.max(6, dayRate),
+          color,
+          tooltip: dayTasks.length > 0 ? `${name}: ${dayCompleted}/${dayTasks.length} tasks completed (${dayRate}%)` : `${name}: No tasks scheduled`,
+        };
+      });
+    } else if (totalProjects > 0) {
+      bars = projects.map((p, idx) => {
+        const pTasks = tasks.filter((t) => t.projectId === p.id);
+        const pCompleted = pTasks.filter((t) => t.status === 'Completed').length;
+        const progress = p.progress ?? (pTasks.length > 0 ? Math.round((pCompleted / pTasks.length) * 100) : (p.status === 'Completed' ? 100 : 0));
+        const color: 'purple' | 'amber' | 'neutral' =
+          progress >= 100 ? 'purple' : progress > 0 ? 'amber' : 'neutral';
+        return {
+          id: p.id || `proj-${idx}`,
+          label: p.name.length > 10 ? p.name.slice(0, 8) + '…' : p.name,
+          value: Math.max(8, progress),
+          color,
+          tooltip: `${p.name}: ${progress}% completed (${pCompleted}/${pTasks.length || p.taskCount || 0} tasks)`,
+        };
+      });
+
+      // If fewer than 8 bars and tasks exist, also display active/recent tasks so the chart looks balanced with real tasks
+      if (bars.length < 8 && tasks.length > 0) {
+        const recentTasks = tasks.slice(0, 8 - bars.length);
+        recentTasks.forEach((t, i) => {
+          const tProgress = t.status === 'Completed' ? 100 : t.status === 'In Progress' ? 65 : t.status === 'In Review' ? 85 : 20;
+          const tColor: 'purple' | 'amber' | 'neutral' =
+            t.status === 'Completed' ? 'purple' : t.status === 'In Progress' ? 'amber' : 'neutral';
+          bars.push({
+            id: `task-${t.id || i}`,
+            label: t.title.length > 10 ? t.title.slice(0, 8) + '…' : t.title,
+            value: Math.max(8, tProgress),
+            color: tColor,
+            tooltip: `Task: "${t.title}" (${t.status})`,
+          });
+        });
+      }
+    } else {
+      // If tasks exist but no projects
+      bars = tasks.slice(0, 12).map((t, i) => {
+        const tProgress = t.status === 'Completed' ? 100 : t.status === 'In Progress' ? 65 : 25;
+        const tColor: 'purple' | 'amber' | 'neutral' =
+          t.status === 'Completed' ? 'purple' : t.status === 'In Progress' ? 'amber' : 'neutral';
+        return {
+          id: `task-${t.id || i}`,
+          label: t.title.slice(0, 8),
+          value: Math.max(8, tProgress),
+          color: tColor,
+          tooltip: `Task: "${t.title}" (${t.status})`,
+        };
+      });
+    }
 
     return {
       rate,
       completedCount: completedTasksCount,
       totalCount: totalTasksCount,
-      comparisonText: `The proportion of the ${projectCount} existing projects.`,
+      comparisonText,
       histogramBars: bars,
     };
-  }, [tasks, projects]);
+  }, [tasks, projects, workTimeframe]);
 
-  // 2. Hours Logged Metrics (Smooth Wave Chart)
+  // 2. Active Duration & Running Uptime Metrics (No Dummy Dollars / Real Elapsed Time)
   const hoursLoggedMetrics: HoursLoggedMetrics = useMemo(() => {
-    // Dynamically calculate from tasks if completed / in-progress exist
-    let totalMinutes = 51 * 60 + 18; // Default 51h 18m
-    if (tasks.length > 0) {
-      const completedWeight = tasks.filter((t) => t.status === 'Completed').length * 4.5;
-      const inProgressWeight = tasks.filter((t) => t.status === 'In Progress').length * 2.8;
-      const subtaskWeight = tasks.reduce((acc, t) => acc + (t.subtasks?.length || 0) * 0.75, 0);
-      const computed = completedWeight + inProgressWeight + subtaskWeight;
-      if (computed > 0) {
-        totalMinutes = Math.round(computed * 60);
+    const now = new Date();
+    let targetStartDateStr: string | undefined;
+    let targetName = '';
+    let statusLabel = 'Idle';
+    let statusVariant: 'active' | 'completed' | 'idle' = 'idle';
+    let comparisonText = '';
+
+    if (hoursFilter === 'projects') {
+      // Pick latest active project
+      const inProgressProj = projects.find((p) => p.status === 'In Progress');
+      const latestProj = inProgressProj || projects[projects.length - 1];
+
+      if (latestProj) {
+        targetStartDateStr = latestProj.startDate || latestProj.createdAt;
+        targetName = latestProj.name;
+        statusLabel = latestProj.status;
+        statusVariant = latestProj.status === 'Completed' ? 'completed' : 'active';
+        const formattedDate = targetStartDateStr
+          ? new Date(targetStartDateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          : 'recently';
+        comparisonText = `Latest project: "${latestProj.name}" • Started ${formattedDate} • ${latestProj.taskCount ?? 0} tasks`;
+      } else {
+        comparisonText = 'No active projects currently in progress.';
+      }
+    } else if (hoursFilter === 'tasks') {
+      // Pick latest active task
+      const inProgressTask = tasks.find((t) => t.status === 'In Progress');
+      const latestTask = inProgressTask || tasks[tasks.length - 1];
+
+      if (latestTask) {
+        targetStartDateStr = latestTask.startDate || latestTask.createdAt;
+        targetName = latestTask.title;
+        statusLabel = latestTask.status;
+        statusVariant = latestTask.status === 'Completed' ? 'completed' : 'active';
+        const parentProj = projects.find((p) => p.id === latestTask.projectId);
+        comparisonText = `Latest task: "${latestTask.title}" • ${latestTask.priority} Priority • ${parentProj ? parentProj.name : 'General'}`;
+      } else {
+        comparisonText = 'No active tasks currently in progress.';
+      }
+    } else {
+      // 'all'
+      const activeProjectsCount = projects.filter((p) => p.status === 'In Progress').length;
+      const activeTasksCount = tasks.filter((t) => t.status === 'In Progress').length;
+
+      const allActiveDates = [
+        ...projects.filter((p) => p.status === 'In Progress').map((p) => p.startDate || p.createdAt),
+        ...tasks.filter((t) => t.status === 'In Progress').map((t) => t.startDate || t.createdAt),
+      ].filter(Boolean);
+
+      if (allActiveDates.length > 0) {
+        allActiveDates.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+        targetStartDateStr = allActiveDates[0];
+        targetName = 'Operations Workspace';
+        statusLabel = 'Active';
+        statusVariant = 'active';
+        comparisonText = `Tracking ${activeProjectsCount} active projects & ${activeTasksCount} operational tasks`;
+      } else {
+        comparisonText = 'No active projects or tasks currently in progress.';
       }
     }
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
 
-    // Hourly billing valuation ($140/hr standard rate)
-    const monetaryValue = Math.round(hours * 141.6 + (minutes / 60) * 141.6);
+    // Compute elapsed duration
+    let days = 0;
+    let hours = 0;
+    let minutes = 0;
+    let startMs = 0;
 
-    const wavePoints = [
-      { x: 0, y: 75, label: 'Mon', hours: 6.2 },
-      { x: 40, y: 32, label: 'Tue', hours: 9.5 },
-      { x: 80, y: 25, label: 'Wed', hours: 10.4 },
-      { x: 130, y: 55, label: 'Thu', hours: 7.1 },
-      { x: 180, y: 62, label: 'Fri', hours: 6.8 },
-      { x: 230, y: 48, label: 'Sat', hours: 8.2 },
-      { x: 280, y: 20, label: 'Sun', hours: 11.0 },
-    ];
+    if (targetStartDateStr) {
+      startMs = new Date(targetStartDateStr).getTime();
+      if (!isNaN(startMs) && startMs <= now.getTime()) {
+        const elapsedMs = now.getTime() - startMs;
+        days = Math.floor(elapsedMs / (1000 * 60 * 60 * 24));
+        hours = Math.floor((elapsedMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        minutes = Math.floor((elapsedMs % (1000 * 60 * 60)) / (1000 * 60));
+      }
+    }
 
-    return {
-      hours,
-      minutes,
-      monetaryValue: monetaryValue > 0 ? monetaryValue : 7279.0,
-      trendPercentage: 18,
-      comparisonText: "it's paid 18% higher than the previous project.",
-      wavePoints,
-    };
-  }, [tasks]);
+    // Compute real 7-day wave curve data points
+    const wavePoints: { x: number; y: number; label: string; hours: number; tooltip: string; val: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      d.setHours(0, 0, 0, 0);
+      const dayStart = d.getTime();
+      const isToday = i === 0;
+      const dayEnd = isToday ? now.getTime() : dayStart + 24 * 3600 * 1000;
+      const dayLabel = d.toLocaleDateString('en-US', { weekday: 'short' });
 
-  // 3. Project Summary Metrics (180° Radial Gauge)
-  const projectSummaryMetrics: ProjectSummaryMetrics = useMemo(() => {
-    const total = projects.length > 0 ? projects.length : 8;
-    const completed = projects.filter((p) => p.status === 'Completed').length;
-    const inProgress = projects.filter((p) => p.status === 'In Progress').length;
-    const early = total - completed - inProgress;
-
-    // Average project completion rate
-    const averageCompletionRate =
-      total > 0
-        ? Math.round(
-            projects.reduce((acc, p) => acc + (p.progress || 55), 0) / total
-          )
-        : 55;
-
-    // Create 24 tick segments across 180 degrees (-90 to +90 degrees)
-    const totalTicks = 24;
-    const completedTicks = Math.round((totalTicks * 4) / 24); // ~4 purple
-    const inProgressTicks = Math.round((totalTicks * 12) / 24); // ~12 mint/teal
-    // remaining ~8 amber
-
-    const ticks = Array.from({ length: totalTicks }, (_, index) => {
-      let status: 'completed' | 'in-progress' | 'early' = 'early';
-      if (index < completedTicks) {
-        status = 'completed';
-      } else if (index < completedTicks + inProgressTicks) {
-        status = 'in-progress';
+      let runningHours = 0;
+      if (startMs > 0 && startMs < dayEnd) {
+        const activeStart = Math.max(startMs, dayStart);
+        const activeMs = Math.max(0, dayEnd - activeStart);
+        runningHours = Math.min(24, Math.round((activeMs / (3600 * 1000)) * 10) / 10);
       }
 
-      // Angle from 180deg (left) to 0deg (right)
-      const angle = 180 - (index / (totalTicks - 1)) * 180;
+      const val = runningHours > 0 ? Math.min(95, Math.max(15, Math.round((runningHours / 24) * 80) + 12)) : 0;
+      wavePoints.push({
+        x: 0,
+        y: 0,
+        label: dayLabel,
+        hours: runningHours,
+        val,
+        tooltip: `${dayLabel}: ${runningHours > 0 ? `${runningHours.toFixed(1)}h active` : '0h (Idle)'}`,
+      });
+    }
+
+    const { path, area, lastPoint } = computeWavePath(wavePoints, 340, 90, 14);
+
+    return {
+      days,
+      hours,
+      minutes,
+      statusBadge: {
+        label: statusLabel,
+        variant: statusVariant,
+      },
+      targetName,
+      comparisonText,
+      wavePoints,
+      svgPath: path,
+      svgArea: area,
+      endpointMarker: lastPoint,
+    };
+  }, [projects, tasks, hoursFilter]);
+
+  // 3. Project Summary Metrics (Radial Speedometer Gauge with Task-Weighted Health Tiers)
+  const projectSummaryMetrics: ProjectSummaryMetrics = useMemo(() => {
+    // Filter projects based on the active dropdown filter ('all' | 'active' | 'completed')
+    let filteredProjects = projects;
+    if (projectSummaryFilter === 'active') {
+      filteredProjects = projects.filter((p) => p.status !== 'Completed');
+    } else if (projectSummaryFilter === 'completed') {
+      filteredProjects = projects.filter((p) => p.status === 'Completed' || (p.progress ?? 0) >= 100);
+    }
+
+    const total = filteredProjects.length;
+
+    let totalPcr = 0;
+    let completedCount = 0;
+    let inProgressCount = 0;
+    let earlyCount = 0;
+
+    // Calculate individual project completion rates (PCR) using task-weighting & deliverable milestones
+    filteredProjects.forEach((p) => {
+      const pTasks = tasks.filter((t) => t.projectId === p.id);
+      let pcr = 0;
+
+      if (pTasks.length > 0) {
+        const taskScores = pTasks.map((t) => {
+          if (t.subtasks && t.subtasks.length > 0) {
+            const done = t.subtasks.filter((s) => s.completed).length;
+            return done / t.subtasks.length;
+          }
+          if (t.status === 'Completed') return 1;
+          if (t.status === 'Approved') return 0.9;
+          if (t.status === 'In Review') return 0.75;
+          if (t.status === 'In Progress') return 0.5;
+          return 0; // 'To Do'
+        });
+        pcr = Math.round((taskScores.reduce((a, b) => a + b, 0) / pTasks.length) * 100);
+      } else if (p.subtasks && p.subtasks.length > 0) {
+        const done = p.subtasks.filter((s) => s.completed).length;
+        pcr = Math.round((done / p.subtasks.length) * 100);
+      } else if (p.status === 'Completed') {
+        pcr = 100;
+      } else {
+        pcr = p.progress ?? 0;
+      }
+
+      totalPcr += pcr;
+
+      // Classify into the three visual legend tiers
+      if (pcr >= 100) {
+        completedCount++;
+      } else if (pcr >= 50) {
+        inProgressCount++;
+      } else {
+        earlyCount++;
+      }
+    });
+
+    const averageCompletionRate = total > 0 ? Math.round(totalPcr / total) : 0;
+
+    // Allocate 24 radial arc ticks according to the project health tier proportions
+    const totalTicks = 24;
+    const completedTicks = total > 0 ? Math.round((totalTicks * completedCount) / total) : 0;
+    const inProgressTicks = total > 0 ? Math.round((totalTicks * inProgressCount) / total) : 0;
+
+    const ticks = Array.from({ length: totalTicks }, (_, index) => {
+      let status: 'completed' | 'in-progress' | 'early' | 'empty' = 'empty';
+      let tooltip = 'No projects recorded';
+
+      if (total > 0) {
+        if (index < completedTicks) {
+          status = 'completed';
+          tooltip = `${completedCount} project${completedCount === 1 ? '' : 's'} fully completed (100%)`;
+        } else if (index < completedTicks + inProgressTicks) {
+          status = 'in-progress';
+          tooltip = `${inProgressCount} project${inProgressCount === 1 ? '' : 's'} well underway (>50%)`;
+        } else {
+          status = 'early';
+          tooltip = `${earlyCount} project${earlyCount === 1 ? '' : 's'} in early stage (<50%)`;
+        }
+      }
+
+      // Angle from 180deg (left) to 0deg (right) with fixed 2-decimal precision
+      const angle = Number((180 - (index / (totalTicks - 1)) * 180).toFixed(2));
       return {
         id: index,
         angle,
         status,
+        tooltip,
       };
     });
 
     return {
       averageCompletionRate,
-      completedRatio: 100,
-      inProgressRatio: 50,
-      earlyRatio: 50,
+      completedCount,
+      inProgressCount,
+      earlyCount,
+      completedRatio: total > 0 ? Math.round((completedCount / total) * 100) : 0,
+      inProgressRatio: total > 0 ? Math.round((inProgressCount / total) * 100) : 0,
+      earlyRatio: total > 0 ? Math.round((earlyCount / total) * 100) : 0,
       totalProjects: total,
       gaugeTicks: ticks,
     };
-  }, [projects]);
+  }, [projects, tasks, projectSummaryFilter]);
 
   // 4. Combined Activity Feed (Seeded Items + Live Storage Events)
   const detailedActivities: DetailedActivityItem[] = useMemo(() => {

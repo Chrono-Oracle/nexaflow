@@ -48,7 +48,7 @@ export function WorkCompletedChartCard({
             <div className="group relative cursor-pointer text-primary-medium/40 hover:text-primary-dark">
               <LuCircleHelp className="w-3.5 h-3.5" />
               <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 hidden group-hover:flex px-2.5 py-1 bg-primary-dark text-white text-[11px] font-medium rounded-md shadow-lg whitespace-nowrap z-30">
-                Calculates completion rate of active milestone deliverables
+                Calculates completion rate of active tasks and project deliverables
               </div>
             </div>
           </div>
@@ -103,37 +103,49 @@ export function WorkCompletedChartCard({
 
       {/* Histogram Bar Graphic */}
       <div className="mt-8 pt-4">
-        <div className="relative h-24 flex items-end gap-1.5 sm:gap-2 px-1">
-          {metrics.histogramBars.map((bar) => {
-            const isHovered = hoveredBarId === bar.id;
+        {metrics.histogramBars.length === 0 ? (
+          <div className="h-24 flex items-center justify-center text-xs text-primary-medium/60 font-medium">
+            No work logged for this period
+          </div>
+        ) : (
+          <div className="relative h-24 flex items-end gap-1.5 sm:gap-2 px-1">
+            {metrics.histogramBars.map((bar) => {
+              const isHovered = hoveredBarId === bar.id;
+              const maxBarWidth =
+                metrics.histogramBars.length <= 8
+                  ? 'max-w-[20px]'
+                  : metrics.histogramBars.length <= 14
+                  ? 'max-w-[14px]'
+                  : 'max-w-[9px]';
 
-            return (
-              <div
-                key={bar.id}
-                onMouseEnter={() => setHoveredBarId(bar.id)}
-                onMouseLeave={() => setHoveredBarId(null)}
-                className="flex-1 flex flex-col items-center justify-end h-full relative cursor-pointer group"
-              >
-                {/* Tooltip on hover */}
-                {isHovered && (
-                  <div className="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 bg-primary-dark text-white text-[10px] font-semibold px-2 py-1 rounded shadow-md whitespace-nowrap z-20 pointer-events-none">
-                    {bar.tooltip}
-                  </div>
-                )}
+              return (
+                <div
+                  key={bar.id}
+                  onMouseEnter={() => setHoveredBarId(bar.id)}
+                  onMouseLeave={() => setHoveredBarId(null)}
+                  className="flex-1 flex flex-col items-center justify-end h-full relative cursor-pointer group"
+                >
+                  {/* Tooltip on hover */}
+                  {isHovered && (
+                    <div className="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 bg-primary-dark text-white text-[10px] font-semibold px-2 py-1 rounded shadow-md whitespace-nowrap z-20 pointer-events-none">
+                      {bar.tooltip}
+                    </div>
+                  )}
 
-                {/* Animated Bar with pill radius */}
-                <motion.div
-                  initial={{ height: 0 }}
-                  animate={{ height: `${bar.value}%` }}
-                  transition={{ duration: 0.5, ease: 'easeOut' }}
-                  className={`w-full min-w-[5px] max-w-[9px] rounded-full transition-all ${getBarColorClass(
-                    bar.color
-                  )} ${isHovered ? 'scale-y-105 shadow-xs' : ''}`}
-                />
-              </div>
-            );
-          })}
-        </div>
+                  {/* Animated Bar with pill radius */}
+                  <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: `${bar.value}%` }}
+                    transition={{ duration: 0.5, ease: 'easeOut' }}
+                    className={`w-full min-w-[5px] ${maxBarWidth} rounded-full transition-all ${getBarColorClass(
+                      bar.color
+                    )} ${isHovered ? 'scale-y-105 shadow-xs' : ''}`}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
