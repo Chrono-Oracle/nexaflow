@@ -115,42 +115,36 @@ export function MobileNav() {
       href: '/team',
       label: t('team'),
       icon: LuUsers,
-      color: 'bg-indigo-50/90 text-indigo-700 border-indigo-200/80',
       isActive: pathname.startsWith('/team'),
     },
     {
       href: '/roadmap',
       label: t('roadmap'),
       icon: LuCalendar,
-      color: 'bg-rose-50/90 text-rose-700 border-rose-200/80',
       isActive: pathname.startsWith('/roadmap'),
     },
     {
       href: '/analytics',
       label: t('analytics'),
       icon: LuChartColumn,
-      color: 'bg-purple-50/90 text-purple-700 border-purple-200/80',
       isActive: pathname.startsWith('/analytics'),
     },
     {
       href: '/settings',
       label: t('settings'),
       icon: LuSettings,
-      color: 'bg-amber-50/90 text-amber-700 border-amber-200/80',
       isActive: pathname.startsWith('/settings'),
     },
     {
       href: '/help',
       label: t('help'),
       icon: LuCircleHelp,
-      color: 'bg-emerald-50/90 text-emerald-700 border-emerald-200/80',
       isActive: pathname.startsWith('/help'),
     },
     {
       href: '#language',
       label: locale === 'en' ? 'Français' : 'English',
       icon: LuGlobe,
-      color: 'bg-teal-50/90 text-teal-700 border-teal-200/80',
       isActive: false,
       isLanguageSwitch: true,
     },
@@ -197,6 +191,19 @@ export function MobileNav() {
                 <div className="grid grid-cols-3 gap-y-3.5 gap-x-2 pt-1.5 pb-4">
                   {extraPages.map((item) => {
                     const Icon = item.icon;
+                    const isItemActive = Boolean(item.isActive);
+
+                    const boxStyles = isItemActive
+                      ? 'bg-primary/10 text-primary-dark border-primary-medium/25 shadow-xs'
+                      : 'bg-white/80 hover:bg-white text-primary-dark/80 hover:text-primary-dark border-primary-medium/15 shadow-2xs hover:shadow-xs';
+
+                    const iconStyles = isItemActive
+                      ? 'text-primary-dark stroke-[2.2]'
+                      : 'text-primary-medium/80 group-hover:text-primary-dark';
+
+                    const labelStyles = isItemActive
+                      ? 'font-bold text-primary-dark'
+                      : 'font-medium text-primary-dark/80 group-hover:text-primary-dark';
 
                     if (item.isLanguageSwitch) {
                       return (
@@ -210,11 +217,13 @@ export function MobileNav() {
                           className="flex flex-col items-center justify-center p-2 rounded-2xl transition-all hover:bg-primary-surface/70 active:scale-95 group focus:outline-none cursor-pointer"
                         >
                           <div
-                            className={`w-13 h-13 rounded-2xl flex items-center justify-center border shadow-2xs transition-transform group-hover:scale-105 ${item.color}`}
+                            className={`w-13 h-13 rounded-2xl flex items-center justify-center border transition-all duration-200 group-hover:scale-105 ${boxStyles}`}
                           >
-                            <Icon className="w-5 h-5" />
+                            <Icon className={`w-5 h-5 transition-colors ${iconStyles}`} />
                           </div>
-                          <span className="text-xs font-medium text-primary-dark text-center mt-1.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+                          <span
+                            className={`text-xs text-center mt-1.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-full transition-colors ${labelStyles}`}
+                          >
                             {item.label}
                           </span>
                         </button>
@@ -229,17 +238,13 @@ export function MobileNav() {
                         className="flex flex-col items-center justify-center p-2 rounded-2xl transition-all hover:bg-primary-surface/70 active:scale-95 group focus:outline-none"
                       >
                         <div
-                          className={`w-13 h-13 rounded-2xl flex items-center justify-center border shadow-2xs transition-transform group-hover:scale-105 ${
-                            item.color
-                          } ${
-                            item.isActive
-                              ? 'ring-2 ring-primary-dark/50 shadow-xs'
-                              : ''
-                          }`}
+                          className={`w-13 h-13 rounded-2xl flex items-center justify-center border transition-all duration-200 group-hover:scale-105 ${boxStyles}`}
                         >
-                          <Icon className="w-5 h-5" />
+                          <Icon className={`w-5 h-5 transition-colors ${iconStyles}`} />
                         </div>
-                        <span className="text-xs font-medium text-primary-dark text-center mt-1.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+                        <span
+                          className={`text-xs text-center mt-1.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-full transition-colors ${labelStyles}`}
+                        >
                           {item.label}
                         </span>
                       </Link>

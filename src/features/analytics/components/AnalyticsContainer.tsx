@@ -82,7 +82,7 @@ export function AnalyticsContainer() {
             filter={projectSummaryFilter}
             onFilterChange={setProjectSummaryFilter}
           />
-          <TeamWorkloadWidget teams={teams} tasks={tasks} />
+          <TeamWorkloadWidget teams={teams} tasks={tasks} projects={projects} />
         </aside>
       </div>
     </div>
