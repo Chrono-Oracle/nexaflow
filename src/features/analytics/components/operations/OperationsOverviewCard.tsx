@@ -2,12 +2,21 @@
 
 import { useMemo } from 'react';
 import { Project } from '@/features/projects/types/project.types';
-import { Task } from '@/features/tasks/types/task.types';
+import { Task, TaskStatus } from '@/features/tasks/types/task.types';
+import { getTaskStatusStyle } from '@/features/projects/utils/badgeStyles';
 
 interface OperationsOverviewCardProps {
   projects: Project[];
   tasks: Task[];
 }
+
+const PIPELINE_STATUSES: TaskStatus[] = [
+  'To Do',
+  'In Progress',
+  'In Review',
+  'Approved',
+  'Completed',
+];
 
 export function OperationsOverviewCard({
   projects,
@@ -16,8 +25,9 @@ export function OperationsOverviewCard({
   const stats = useMemo(() => {
     const totalTasks = tasks.length;
     const completedTasks = tasks.filter((t) => t.status === 'Completed').length;
-    const inProgressTasks = tasks.filter((t) => t.status === 'In Progress').length;
+    const approvedTasks = tasks.filter((t) => t.status === 'Approved').length;
     const inReviewTasks = tasks.filter((t) => t.status === 'In Review').length;
+    const inProgressTasks = tasks.filter((t) => t.status === 'In Progress').length;
     const todoTasks = tasks.filter((t) => t.status === 'To Do').length;
 
     const urgentTasks = tasks.filter((t) => t.priority === 'Urgent').length;
@@ -28,6 +38,7 @@ export function OperationsOverviewCard({
     return {
       totalTasks,
       completedTasks,
+      approvedTasks,
       inProgressTasks,
       inReviewTasks,
       todoTasks,
@@ -40,12 +51,27 @@ export function OperationsOverviewCard({
     };
   }, [projects, tasks]);
 
-  const pipeline = [
-    { label: 'To Do', count: stats.todoTasks, color: 'bg-amber-400', textColor: 'text-amber-700' },
-    { label: 'In Progress', count: stats.inProgressTasks, color: 'bg-blue-500', textColor: 'text-blue-700' },
-    { label: 'In Review', count: stats.inReviewTasks, color: 'bg-purple-500', textColor: 'text-purple-700' },
-    { label: 'Completed', count: stats.completedTasks, color: 'bg-emerald-500', textColor: 'text-emerald-700' },
-  ];
+  // Task pipeline representation synchronized 1:1 with Task Page colors and styling
+  const pipeline = useMemo(() => {
+    return PIPELINE_STATUSES.map((st) => {
+      const style = getTaskStatusStyle(st);
+      let count = 0;
+      if (st === 'To Do') count = stats.todoTasks;
+      else if (st === 'In Progress') count = stats.inProgressTasks;
+      else if (st === 'In Review') count = stats.inReviewTasks;
+      else if (st === 'Approved') count = stats.approvedTasks;
+      else if (st === 'Completed') count = stats.completedTasks;
+
+      return {
+        status: st,
+        label: style.label,
+        count,
+        dotColor: style.dotColor,
+        badgeClass: style.badgeClass,
+        barColor: style.dotColor,
+      };
+    });
+  }, [stats]);
 
   return (
     <div className="bg-white rounded-2xl border border-primary-medium/15 p-5 sm:p-6 shadow-xs font-elms">
@@ -80,7 +106,7 @@ export function OperationsOverviewCard({
                 <div
                   key={item.label}
                   style={{ width: `${pct}%` }}
-                  className={`${item.color} h-full transition-all`}
+                  className={`${item.barColor} h-full transition-all`}
                   title={`${item.label}: ${item.count} tasks`}
                 />
               );
@@ -90,20 +116,22 @@ export function OperationsOverviewCard({
           )}
         </div>
 
-        {/* Pipeline Badges */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-          {pipeline.map((item) => (
+        {/* Pipeline Badges: 5 lifecycle states matching Task Page identically */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
+          {pipeline.map((item, index) => (
             <div
               key={item.label}
-              className="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200/70 flex items-center justify-between"
+              className={`p-2.5 rounded-xl border flex items-center justify-between shadow-2xs transition-all ${
+                item.badgeClass
+              } ${index === 4 ? 'col-span-2 sm:col-span-1' : ''}`}
             >
-              <div className="flex items-center gap-1.5">
-                <span className={`w-2 h-2 rounded-full ${item.color}`} />
-                <span className="text-xs font-medium text-primary-medium/80">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className={`w-2 h-2 rounded-full shrink-0 ${item.dotColor}`} />
+                <span className="text-xs font-bold truncate">
                   {item.label}
                 </span>
               </div>
-              <span className={`text-xs font-bold ${item.textColor}`}>
+              <span className="text-xs font-extrabold shrink-0 ml-1 px-1.5 py-0.5 rounded-md bg-white shadow-2xs leading-none">
                 {item.count}
               </span>
             </div>

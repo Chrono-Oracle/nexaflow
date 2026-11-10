@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { LuArrowLeft } from 'react-icons/lu';
-import { Link } from '@/i18n/routing';
 import { SettingsTabId } from '../types/settings.types';
 import { SettingsNavTabs } from './SettingsNavTabs';
 import { ProfileTab } from './tabs/ProfileTab';
@@ -31,26 +29,7 @@ export function SettingsContainer() {
 
   return (
     <div className="font-elms w-full space-y-6 pb-16">
-      {/* Top Header Section matching other pages */}
-      <div className="space-y-2.5">
-        {/* Back to dashboard link */}
-        <div>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-primary-dark/80 hover:text-primary-dark transition-colors cursor-pointer group"
-          >
-            <LuArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1 text-primary-dark" />
-            <span>Back to dashboard</span>
-          </Link>
-        </div>
-
-        {/* Title */}
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-primary-dark tracking-tight">
-          Settings
-        </h1>
-      </div>
-
-      {/* Navlinks Pill Bar */}
+      {/* Navlinks Pill Bar Header at the top */}
       <SettingsNavTabs
         activeTab={activeTab}
         onTabChange={(tabId) => setActiveTab(tabId)}
