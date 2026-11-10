@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import {
   useProjectsQuery,
@@ -191,6 +191,71 @@ const SEEDED_ACTIVITIES: DetailedActivityItem[] = [
   },
 ];
 
+/**
+ * Safely extracts the exact creation timestamp (in milliseconds) for an item (project or task).
+ * Prioritizes:
+ * 1. Full ISO timestamp in createdAt (e.g. "2026-11-10T13:45:12.345Z")
+ * 2. Embedded creation millisecond in item.id (e.g. "proj_1794320140145_abc")
+ * 3. Initial activity timestamp inside activities
+ * 4. Fallback to parsing createdAt or startDate
+ */
+export function getExactItemTimestamp(item?: {
+  id?: string;
+  createdAt?: string;
+  startDate?: string;
+  activities?: Array<{ timestamp?: string; id?: string }>;
+}): number {
+  if (!item) return 0;
+
+  // 1. Full ISO string with 'T' (explicit exact creation timestamp)
+  if (item.createdAt && item.createdAt.includes('T')) {
+    const ms = new Date(item.createdAt).getTime();
+    if (!isNaN(ms) && ms > 0) return ms;
+  }
+
+  // 2. Embedded millisecond timestamp in ID (e.g. proj_1794320140145_... / task_...)
+  if (item.id) {
+    const match = item.id.match(/(?:proj|task|act)_(\d{11,14})/);
+    if (match) {
+      const ms = parseInt(match[1], 10);
+      if (!isNaN(ms) && ms > 1600000000000) {
+        return ms;
+      }
+    }
+  }
+
+  // 3. Embedded timestamp in activities
+  if (item.activities && item.activities.length > 0) {
+    for (const act of item.activities) {
+      if (act.timestamp && act.timestamp.includes('T')) {
+        const ms = new Date(act.timestamp).getTime();
+        if (!isNaN(ms) && ms > 0) return ms;
+      }
+      if (act.id) {
+        const actMatch = act.id.match(/act_(\d{11,14})/);
+        if (actMatch) {
+          const ms = parseInt(actMatch[1], 10);
+          if (!isNaN(ms) && ms > 1600000000000) return ms;
+        }
+      }
+    }
+  }
+
+  // 4. Fallback to createdAt string
+  if (item.createdAt) {
+    const ms = new Date(item.createdAt).getTime();
+    if (!isNaN(ms) && ms > 0) return ms;
+  }
+
+  // 5. Fallback to startDate string
+  if (item.startDate) {
+    const ms = new Date(item.startDate).getTime();
+    if (!isNaN(ms) && ms > 0) return ms;
+  }
+
+  return 0;
+}
+
 export function useAnalyticsData() {
   const { data: projects = [] } = useProjectsQuery();
   const { data: tasks = [] } = useTasksQuery();
@@ -204,6 +269,15 @@ export function useAnalyticsData() {
   const [activityAccessState, setActivityAccessState] = useState<Record<string, 'pending' | 'approved' | 'denied'>>({
     'act-access-2': 'pending',
   });
+
+  // Real-time ticking state to keep the active duration counter strictly live and synchronized
+  const [currentTime, setCurrentTime] = useState<number>(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 15000); // Ticks every 15 seconds
+    return () => clearInterval(timer);
+  }, []);
 
   // Active Project IDs to ensure deleted projects and their leftover tasks are never counted
   const validProjectIds = useMemo(() => new Set(projects.map((p) => p.id)), [projects]);
@@ -334,83 +408,103 @@ export function useAnalyticsData() {
     };
   }, [activeTasks, projects, workTimeframe]);
 
-  // 2. Active Duration & Running Uptime Metrics (No Dummy Dollars / Real Elapsed Time)
+  // 2. Active Duration & Running Uptime Metrics (Exact Creation Elapsed Time)
   const hoursLoggedMetrics: HoursLoggedMetrics = useMemo(() => {
-    const now = new Date();
-    let targetStartDateStr: string | undefined;
+    const now = new Date(currentTime);
+    let startMs = 0;
     let targetName = '';
     let statusLabel = 'Idle';
     let statusVariant: 'active' | 'completed' | 'idle' = 'idle';
     let comparisonText = '';
 
     if (hoursFilter === 'projects') {
-      // Pick latest active project
-      const inProgressProj = projects.find((p) => p.status === 'In Progress');
-      const latestProj = inProgressProj || projects[projects.length - 1];
+      // Sort projects by exact creation timestamp descending so the truly newest project is first
+      const sortedProjects = [...projects].sort(
+        (a, b) => getExactItemTimestamp(b) - getExactItemTimestamp(a)
+      );
+
+      // Pick latest active project (prefer 'In Progress', fallback to latest created)
+      const inProgressProj = sortedProjects.find((p) => p.status === 'In Progress');
+      const latestProj = inProgressProj || sortedProjects[0];
 
       if (latestProj) {
-        targetStartDateStr = latestProj.startDate || latestProj.createdAt;
+        startMs = getExactItemTimestamp(latestProj);
         targetName = latestProj.name;
         statusLabel = latestProj.status;
         statusVariant = latestProj.status === 'Completed' ? 'completed' : 'active';
-        const formattedDate = targetStartDateStr
-          ? new Date(targetStartDateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+
+        const createdDate = startMs > 0 ? new Date(startMs) : null;
+        const isToday = createdDate && createdDate.toDateString() === now.toDateString();
+        const formattedDate = createdDate
+          ? isToday
+            ? `Today at ${createdDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
+            : createdDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
           : 'recently';
-        comparisonText = `Latest project: "${latestProj.name}" • Started ${formattedDate} • ${latestProj.taskCount ?? 0} tasks`;
+        comparisonText = `Latest project: "${latestProj.name}" • Created ${formattedDate} • ${latestProj.taskCount ?? 0} tasks`;
       } else {
         comparisonText = 'No active projects currently in progress.';
       }
     } else if (hoursFilter === 'tasks') {
-      // Pick latest active task among active projects
-      const inProgressTask = activeTasks.find((t) => t.status === 'In Progress');
-      const latestTask = inProgressTask || activeTasks[activeTasks.length - 1];
+      // Sort active tasks by exact creation timestamp descending
+      const sortedTasks = [...activeTasks].sort(
+        (a, b) => getExactItemTimestamp(b) - getExactItemTimestamp(a)
+      );
+
+      // Pick latest active task (prefer 'In Progress', fallback to latest created)
+      const inProgressTask = sortedTasks.find((t) => t.status === 'In Progress');
+      const latestTask = inProgressTask || sortedTasks[0];
 
       if (latestTask) {
-        targetStartDateStr = latestTask.startDate || latestTask.createdAt;
+        startMs = getExactItemTimestamp(latestTask);
         targetName = latestTask.title;
         statusLabel = latestTask.status;
         statusVariant = latestTask.status === 'Completed' ? 'completed' : 'active';
         const parentProj = projects.find((p) => p.id === latestTask.projectId);
-        comparisonText = `Latest task: "${latestTask.title}" • ${latestTask.priority} Priority • ${parentProj ? parentProj.name : 'General'}`;
+        const createdDate = startMs > 0 ? new Date(startMs) : null;
+        const isToday = createdDate && createdDate.toDateString() === now.toDateString();
+        const formattedDate = createdDate
+          ? isToday
+            ? `Today at ${createdDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
+            : createdDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          : 'recently';
+        comparisonText = `Latest task: "${latestTask.title}" • Created ${formattedDate} • ${latestTask.priority} Priority • ${parentProj ? parentProj.name : 'General'}`;
       } else {
         comparisonText = 'No active tasks currently in progress.';
       }
     } else {
       // 'all'
-      const activeProjectsCount = projects.filter((p) => p.status === 'In Progress').length;
-      const activeTasksCount = activeTasks.filter((t) => t.status === 'In Progress').length;
+      const activeProjects = projects.filter((p) => p.status === 'In Progress');
+      const activeTasksInProgress = activeTasks.filter((t) => t.status === 'In Progress');
 
-      const allActiveDates = [
-        ...projects.filter((p) => p.status === 'In Progress').map((p) => p.startDate || p.createdAt),
-        ...activeTasks.filter((t) => t.status === 'In Progress').map((t) => t.startDate || t.createdAt),
-      ].filter(Boolean);
+      const allActiveTimestamps = [
+        ...activeProjects.map((p) => getExactItemTimestamp(p)),
+        ...activeTasksInProgress.map((t) => getExactItemTimestamp(t)),
+      ].filter((ms) => ms > 0);
 
-      if (allActiveDates.length > 0) {
-        allActiveDates.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
-        targetStartDateStr = allActiveDates[0];
+      if (allActiveTimestamps.length > 0) {
+        allActiveTimestamps.sort((a, b) => a - b);
+        startMs = allActiveTimestamps[0]; // Earliest active item
         targetName = 'Operations Workspace';
         statusLabel = 'Active';
         statusVariant = 'active';
-        comparisonText = `Tracking ${activeProjectsCount} active projects & ${activeTasksCount} operational tasks`;
+        comparisonText = `Tracking ${activeProjects.length} active projects & ${activeTasksInProgress.length} operational tasks`;
       } else {
         comparisonText = 'No active projects or tasks currently in progress.';
       }
     }
 
-    // Compute elapsed duration
+    // Compute elapsed duration strictly from exact creation timestamp
     let days = 0;
     let hours = 0;
     let minutes = 0;
-    let startMs = 0;
 
-    if (targetStartDateStr) {
-      startMs = new Date(targetStartDateStr).getTime();
-      if (!isNaN(startMs) && startMs <= now.getTime()) {
-        const elapsedMs = now.getTime() - startMs;
-        days = Math.floor(elapsedMs / (1000 * 60 * 60 * 24));
-        hours = Math.floor((elapsedMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        minutes = Math.floor((elapsedMs % (1000 * 60 * 60)) / (1000 * 60));
-      }
+    if (startMs > 0) {
+      // Guard against future timestamps due to minor clock jitter
+      const effectiveStartMs = Math.min(startMs, now.getTime());
+      const elapsedMs = Math.max(0, now.getTime() - effectiveStartMs);
+      days = Math.floor(elapsedMs / (1000 * 60 * 60 * 24));
+      hours = Math.floor((elapsedMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      minutes = Math.floor((elapsedMs % (1000 * 60 * 60)) / (1000 * 60));
     }
 
     // Compute real 7-day wave curve data points
@@ -459,7 +553,7 @@ export function useAnalyticsData() {
       svgArea: area,
       endpointMarker: lastPoint,
     };
-  }, [projects, activeTasks, hoursFilter]);
+  }, [projects, activeTasks, hoursFilter, currentTime]);
 
   // 3. Project Summary Metrics (Radial Speedometer Gauge with Task-Weighted Health Tiers)
   const projectSummaryMetrics: ProjectSummaryMetrics = useMemo(() => {

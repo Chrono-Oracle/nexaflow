@@ -82,7 +82,27 @@ export const storageApi = {
   // PROJECTS CRUD
   // ==========================================
   async getProjects(): Promise<Project[]> {
-    return getStoredItem<Project[]>(STORAGE_KEYS.PROJECTS, INITIAL_PROJECTS);
+    const projects = getStoredItem<Project[]>(STORAGE_KEYS.PROJECTS, INITIAL_PROJECTS);
+    let needsUpdate = false;
+    // Migration: If any stored project has a truncated YYYY-MM-DD createdAt, but its id has the exact timestamp, restore full ISO string!
+    const migrated = projects.map((p) => {
+      if (p.createdAt && !p.createdAt.includes('T')) {
+        const idMatch = p.id?.match(/proj_(\d{11,14})/);
+        if (idMatch) {
+          const ms = parseInt(idMatch[1], 10);
+          if (!isNaN(ms) && ms > 1600000000000) {
+            needsUpdate = true;
+            return { ...p, createdAt: new Date(ms).toISOString() };
+          }
+        }
+      }
+      return p;
+    });
+    if (needsUpdate) {
+      setStoredItem(STORAGE_KEYS.PROJECTS, migrated);
+      return migrated;
+    }
+    return projects;
   },
 
   async getProjectById(id: string): Promise<Project | null> {
@@ -95,7 +115,7 @@ export const storageApi = {
     const newProject: Project = {
       ...project,
       id: `proj_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      createdAt: new Date().toISOString().split('T')[0],
+      createdAt: new Date().toISOString(),
       taskCount: project.taskCount ?? 0,
       progress: project.progress ?? 0,
       tags: project.tags ?? [],
@@ -206,7 +226,7 @@ export const storageApi = {
     const validProjectNames = new Set(projects.map((p) => p.name.toLowerCase()));
 
     // Prune orphaned tasks whose parent project was deleted from the workspace
-    const tasks = rawTasks.filter((t) => {
+    let tasks = rawTasks.filter((t) => {
       // Keep general standalone tasks without specific project linkage
       if (!t.projectId || t.projectId === 'proj-general') {
         // However, if the task title matches a deleted project name and there's no project by that name, drop it
@@ -219,6 +239,25 @@ export const storageApi = {
     });
 
     if (tasks.length !== rawTasks.length) {
+      setStoredItem(STORAGE_KEYS.TASKS, tasks);
+    }
+
+    // Migrate any legacy tasks whose createdAt is date-only
+    let tasksMigrated = false;
+    tasks = tasks.map((t) => {
+      if (t.createdAt && !t.createdAt.includes('T')) {
+        const idMatch = t.id?.match(/task_(\d{11,14})/);
+        if (idMatch) {
+          const ms = parseInt(idMatch[1], 10);
+          if (!isNaN(ms) && ms > 1600000000000) {
+            tasksMigrated = true;
+            return { ...t, createdAt: new Date(ms).toISOString() };
+          }
+        }
+      }
+      return t;
+    });
+    if (tasksMigrated) {
       setStoredItem(STORAGE_KEYS.TASKS, tasks);
     }
     let hasMissing = false;
